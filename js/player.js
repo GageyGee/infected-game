@@ -27,8 +27,8 @@ class Player {
         
         // Shooting properties
         this.fireRate = {
-            pistol: 0.8, // Much slower - just over 1 shot per second
-            spray: 0.15  // Spray gun also slowed down a bit
+            pistol: 1.0, // 1 shot per second
+            spray: 0.2   // 5 shots per second for spray gun
         };
         
         this.bulletDamage = {
