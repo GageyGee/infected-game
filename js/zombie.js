@@ -1,5 +1,30 @@
 class Zombie {
+    // Static properties to hold sprite images
+    static sprites = [
+        'https://i.ibb.co/7fMNSfx/s3.png',
+        'https://i.ibb.co/BVbbHv5/s4.png',  // Fixed URL (removed the m)
+        'https://i.ibb.co/Cs0nhJ2/s2.png'   // Fixed URL (removed the W)
+    ];
+    
+    static images = [];
+    
+    // Static initialization to load images
+    static initSprites() {
+        // Only load once
+        if (this.images.length === 0) {
+            this.sprites.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                this.images.push(img);
+            });
+            console.log("Zombie sprites loaded:", this.images.length);
+        }
+    }
+
     constructor(x, y, speed, health, size = 20) {
+        // Ensure sprites are loaded
+        Zombie.initSprites();
+        
         this.x = x;
         this.y = y;
         this.baseSpeed = speed;
@@ -7,8 +32,8 @@ class Zombie {
         this.maxHealth = health;
         this.health = health;
         this.size = size;
-        this.color = '#2ecc71'; // Green color
-        this.damage = 33; // Damage per hit (3 hits to kill)
+        this.color = '#2ecc71'; // Green color (fallback)
+        this.damage = 10; // Damage per hit
         this.attackCooldown = 0;
         this.knockback = 0;
         this.knockbackAngle = 0;
@@ -17,6 +42,10 @@ class Zombie {
         // For death animation
         this.dying = false;
         this.deathTimer = 0;
+        
+        // Sprite-related properties
+        this.spriteIndex = Math.floor(Math.random() * Zombie.images.length); // Random sprite
+        this.facingAngle = 0; // Direction the zombie is facing
     }
 
     update(deltaTime, playerX, playerY) {
@@ -89,11 +118,18 @@ class Zombie {
             // Fade out and shrink
             ctx.globalAlpha = 1 - progress;
             
-            // Draw sprite with reduced size
-            const zombieImage = zombieImages[this.spriteIndex];
-            const spriteSize = this.size * 2 * (1 - progress);
-            
-            if (zombieImage && zombieImage.complete) {
+            // Use fallback circle if images aren't ready yet
+            if (Zombie.images.length === 0 || !Zombie.images[this.spriteIndex] || !Zombie.images[this.spriteIndex].complete) {
+                // Fallback to circle
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.size * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Draw sprite with reduced size
+                const zombieImage = Zombie.images[this.spriteIndex];
+                const spriteSize = this.size * 2 * (1 - progress);
+                
                 ctx.save();
                 ctx.translate(screenX, screenY);
                 ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
@@ -105,23 +141,46 @@ class Zombie {
                     spriteSize
                 );
                 ctx.restore();
-            } else {
-                // Fallback if image not loaded
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, this.size * (1 - progress), 0, Math.PI * 2);
-                ctx.fill();
             }
             
             ctx.globalAlpha = 1;
             return;
         }
         
-        // Draw zombie sprite
-        const zombieImage = zombieImages[this.spriteIndex];
-        const spriteSize = this.size * 2; // Make sprite a bit larger than the collision circle
-        
-        if (zombieImage && zombieImage.complete) {
+        // Use fallback circle if images aren't ready yet
+        if (Zombie.images.length === 0 || !Zombie.images[this.spriteIndex] || !Zombie.images[this.spriteIndex].complete) {
+            // Draw body as a circle (fallback)
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw eyes
+            const eyeDistance = this.size * 0.4;
+            const eyeSize = this.size * 0.25;
+            
+            // Calculate eye angle based on player position
+            const eyeAngle = this.facingAngle;
+            
+            // Left eye
+            const leftEyeX = screenX + Math.cos(eyeAngle) * eyeDistance - Math.sin(eyeAngle) * eyeDistance * 0.5;
+            const leftEyeY = screenY + Math.sin(eyeAngle) * eyeDistance + Math.cos(eyeAngle) * eyeDistance * 0.5;
+            
+            // Right eye
+            const rightEyeX = screenX + Math.cos(eyeAngle) * eyeDistance + Math.sin(eyeAngle) * eyeDistance * 0.5;
+            const rightEyeY = screenY + Math.sin(eyeAngle) * eyeDistance - Math.cos(eyeAngle) * eyeDistance * 0.5;
+            
+            // Draw eyes
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(leftEyeX, leftEyeY, eyeSize, 0, Math.PI * 2);
+            ctx.arc(rightEyeX, rightEyeY, eyeSize, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Draw zombie sprite
+            const zombieImage = Zombie.images[this.spriteIndex];
+            const spriteSize = this.size * 2.5; // Make sprite a bit larger than the collision circle
+            
             ctx.save();
             ctx.translate(screenX, screenY);
             ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
@@ -133,28 +192,7 @@ class Zombie {
                 spriteSize
             );
             ctx.restore();
-        } else {
-            // Fallback if image not loaded
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
-            ctx.fill();
         }
-    }
-
-    takeDamage(damage, angle) {
-        this.health -= damage;
-        
-        // Apply knockback
-        this.knockback = 200;
-        this.knockbackAngle = angle;
-        
-        if (this.health <= 0 && !this.dying) {
-            this.dying = true;
-            return true; // Return true if killed
-        }
-        
-        return false;
     }
 
     attack(player) {
@@ -184,26 +222,18 @@ class Zombie {
         return false;
     }
 
-    // Static method to generate a zombie based on the level
-    static generateForLevel(level, canvasWidth, canvasHeight, playerX, playerY, offsetX, offsetY) {
-        // Increase zombie stats based on level
-        const baseSpeed = 60 + Math.min(level * 5, 90); // Cap speed increase at level 18
-        const speed = baseSpeed * (0.8 + Math.random() * 0.4); // Vary speed by ±20%
+    takeDamage(damage, angle) {
+        this.health -= damage;
         
-        const baseHealth = 50 + Math.min(level * 10, 250); // Cap health increase at level 25
-        const health = baseHealth * (0.8 + Math.random() * 0.4); // Vary health by ±20%
+        // Apply knockback
+        this.knockback = 200;
+        this.knockbackAngle = angle;
         
-        const baseSize = 15 + Math.min(level, 10); // Cap size increase at level 10
-        const size = baseSize * (0.9 + Math.random() * 0.2); // Vary size by ±10%
+        if (this.health <= 0 && !this.dying) {
+            this.dying = true;
+            return true; // Return true if killed
+        }
         
-        // Generate position outside of the screen but not too far
-        const margin = 100; // Margin outside the screen
-        const spawnAngle = Math.random() * Math.PI * 2; // Random angle around the player
-        const spawnDistance = canvasWidth > canvasHeight ? canvasWidth : canvasHeight;
-        
-        const x = playerX + Math.cos(spawnAngle) * spawnDistance;
-        const y = playerY + Math.sin(spawnAngle) * spawnDistance;
-        
-        return new Zombie(x, y, speed, health, size);
+        return false;
     }
 }
