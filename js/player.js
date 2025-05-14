@@ -384,7 +384,7 @@ drawWeapon(ctx, centerX, centerY, mouseX, mouseY) {
     ctx.save();
     
     // Calculate position on the circle's edge - push it much farther out
-    const positionRadius = this.size * 4; // Increased from 1.1 to 1.4 to push it out more
+    const positionRadius = this.size * 2.2; // Increased from 1.1 to 1.4 to push it out more
     const weaponPositionX = centerX + Math.cos(angle) * positionRadius;
     const weaponPositionY = centerY + Math.sin(angle) * positionRadius;
     
