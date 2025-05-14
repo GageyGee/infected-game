@@ -98,7 +98,7 @@ class Game {
         this.zombiesToSpawn = this.zombiesPerLevel;
         
         // Update UI
-        updateElement('health', this.player.health);
+        updateElement('health', Math.floor(this.player.health)); // Show health as integer
         updateElement('level', this.level);
         updateElement('score', this.score);
         updateElement('zombies', this.zombiesRemaining);
