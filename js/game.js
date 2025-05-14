@@ -509,9 +509,9 @@ class Game {
             bullet.draw(this.ctx, this.worldOffsetX, this.worldOffsetY);
         }
         
-        // Draw player (always in the center)
-        this.player.draw(this.ctx);
-    }
+        // Draw player (always in the center) - pass mouse coordinates
+        this.player.draw(this.ctx, this.mouseX, this.mouseY);
+}
 
     // Draw minimap
     drawMinimap() {
