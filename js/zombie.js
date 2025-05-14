@@ -34,6 +34,9 @@ class Zombie {
             this.attackCooldown -= deltaTime;
         }
         
+        // Calculate angle to player for facing direction
+        this.facingAngle = getAngle(this.x, this.y, playerX, playerY);
+        
         // Apply knockback if active
         if (this.knockback > 0) {
             // Move in knockback direction
@@ -44,12 +47,9 @@ class Zombie {
             this.knockback -= 20 * deltaTime;
             if (this.knockback < 0) this.knockback = 0;
         } else {
-            // Calculate direction to the player
-            const angle = getAngle(this.x, this.y, playerX, playerY);
-            
             // Move towards the player
-            this.x += Math.cos(angle) * this.speed * deltaTime;
-            this.y += Math.sin(angle) * this.speed * deltaTime;
+            this.x += Math.cos(this.facingAngle) * this.speed * deltaTime;
+            this.y += Math.sin(this.facingAngle) * this.speed * deltaTime;
         }
     }
 
@@ -88,44 +88,58 @@ class Zombie {
             
             // Fade out and shrink
             ctx.globalAlpha = 1 - progress;
-            const shrinkSize = this.size * (1 - progress);
             
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, shrinkSize, 0, Math.PI * 2);
-            ctx.fill();
+            // Draw sprite with reduced size
+            const zombieImage = zombieImages[this.spriteIndex];
+            const spriteSize = this.size * 2 * (1 - progress);
+            
+            if (zombieImage && zombieImage.complete) {
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
+                ctx.drawImage(
+                    zombieImage,
+                    -spriteSize/2,
+                    -spriteSize/2,
+                    spriteSize,
+                    spriteSize
+                );
+                ctx.restore();
+            } else {
+                // Fallback if image not loaded
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.size * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            }
             
             ctx.globalAlpha = 1;
             return;
         }
         
-        // Draw body - this is the main zombie circle
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw zombie sprite
+        const zombieImage = zombieImages[this.spriteIndex];
+        const spriteSize = this.size * 2; // Make sprite a bit larger than the collision circle
         
-        // Draw eyes without shadow effects
-        const eyeDistance = this.size * 0.4;
-        const eyeSize = this.size * 0.25;
-        
-        // Calculate eye angle based on player position
-        const eyeAngle = getAngle(this.x, this.y, offsetX + ctx.canvas.width / 2, offsetY + ctx.canvas.height / 2);
-        
-        // Left eye
-        const leftEyeX = screenX + Math.cos(eyeAngle) * eyeDistance - Math.sin(eyeAngle) * eyeDistance * 0.5;
-        const leftEyeY = screenY + Math.sin(eyeAngle) * eyeDistance + Math.cos(eyeAngle) * eyeDistance * 0.5;
-        
-        // Right eye
-        const rightEyeX = screenX + Math.cos(eyeAngle) * eyeDistance + Math.sin(eyeAngle) * eyeDistance * 0.5;
-        const rightEyeY = screenY + Math.sin(eyeAngle) * eyeDistance - Math.cos(eyeAngle) * eyeDistance * 0.5;
-        
-        // Draw eyes
-        ctx.fillStyle = '#111';
-        ctx.beginPath();
-        ctx.arc(leftEyeX, leftEyeY, eyeSize, 0, Math.PI * 2);
-        ctx.arc(rightEyeX, rightEyeY, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
+        if (zombieImage && zombieImage.complete) {
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
+            ctx.drawImage(
+                zombieImage,
+                -spriteSize/2,
+                -spriteSize/2,
+                spriteSize,
+                spriteSize
+            );
+            ctx.restore();
+        } else {
+            // Fallback if image not loaded
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     takeDamage(damage, angle) {
