@@ -1,7 +1,13 @@
 class Bullet {
-    constructor(x, y, angle, speed, damage, color = '#4deefc', radius = 4) {
-        this.x = x;
-        this.y = y;
+    constructor(x, y, angle, speed, damage, playerRadius = 20, color = '#4deefc', radius = 4) {
+        // Calculate starting position outside the player circle with padding
+        const padding = 10; // 10px padding as requested
+        const distanceFromCenter = playerRadius + padding;
+        
+        // Set bullet starting position outside the player circle
+        this.x = x + Math.cos(angle) * distanceFromCenter;
+        this.y = y + Math.sin(angle) * distanceFromCenter;
+        
         this.angle = angle;
         this.speed = speed;
         this.damage = damage;
@@ -59,9 +65,9 @@ class Bullet {
 
 // Spray gun bullet - inherits from Bullet
 class SprayBullet extends Bullet {
-    constructor(x, y, angle, speed, damage) {
+    constructor(x, y, angle, speed, damage, playerRadius = 20) {
         // Add a small random angle to create a spray effect
         const spreadAngle = angle + (Math.random() - 0.5) * 0.4; // +/- 0.2 radians spread
-        super(x, y, spreadAngle, speed, damage, '#ffcc00', 2);
+        super(x, y, spreadAngle, speed, damage, playerRadius, '#ffcc00', 2);
     }
 }
