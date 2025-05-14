@@ -10,38 +10,65 @@
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
         
-        <div id="stats-container">
-            <div class="stat-item">
-                <span class="stat-label">HEALTH</span>
-                <span id="health" class="stat-value">100</span>
+        <div id="start-screen">
+            <h1>INFECTED</h1>
+            <div class="game-subtitle">ZOMBIE SURVIVAL</div>
+            
+            <div class="input-container">
+                <label for="player-name">NAME</label>
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
             </div>
-            <div class="stat-item">
-                <span class="stat-label">LEVEL</span>
-                <span id="level" class="stat-value">1</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">SCORE</span>
-                <span id="score" class="stat-value">0</span>
-            </div>
-        </div>
-        
-        <div id="wave-container">
-            <div class="wave-info">
-                <span class="wave-label">WAVE</span>
-                <span id="wave" class="wave-value">1</span>
-            </div>
-            <div class="wave-info">
-                <span class="wave-label">ZOMBIES</span>
-                <span id="zombies" class="wave-value">0</span>
-            </div>
-            <div class="wave-info">
-                <span class="wave-label">SCORE</span>
-                <span id="score-top" class="wave-value">0</span>
+            
+            <button id="connect-wallet-button">CONNECT WALLET</button>
+            <button id="start-game-button">START GAME</button>
+            
+            <div class="game-instructions">
+                <div class="controls-title">CONTROLS</div>
+                <div class="controls-list">
+                    <div class="control-item">MOVE: WASD KEYS</div>
+                    <div class="control-item">SHOOT: LEFT MOUSE BUTTON</div>
+                    <div class="control-item">SURVIVE AS LONG AS POSSIBLE!</div>
+                </div>
             </div>
         </div>
         
-        <div id="weapon-container">
-            <div id="current-weapon" class="weapon-display">PISTOL</div>
+        <div id="game-ui" class="hidden">
+            <div id="stats-container">
+                <div class="player-name-display">
+                    <span id="player-name-display">PLAYER</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">HEALTH</span>
+                    <span id="health" class="stat-value">100</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">LEVEL</span>
+                    <span id="level" class="stat-value">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">SCORE</span>
+                    <span id="score" class="stat-value">0</span>
+                </div>
+            </div>
+            
+            <div id="wave-container">
+                <div class="wave-info">
+                    <span class="wave-label">WAVE</span>
+                    <span id="wave" class="wave-value">1</span>
+                </div>
+                <div class="wave-info">
+                    <span class="wave-label">ZOMBIES</span>
+                    <span id="zombies" class="wave-value">0</span>
+                </div>
+                <div class="wave-info">
+                    <span class="wave-label">SCORE</span>
+                    <span id="score-top" class="wave-value">0</span>
+                </div>
+            </div>
+            
+            <div id="weapon-container">
+                <div id="current-weapon" class="weapon-display">PISTOL</div>
+            </div>
         </div>
         
         <div id="game-over" class="hidden">
