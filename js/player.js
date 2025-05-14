@@ -383,24 +383,31 @@ class Player {
         // Save the context state
         ctx.save();
         
-        // Translate to the player's position
-        ctx.translate(centerX, centerY);
+        // Calculate position on the circle's edge
+        const positionRadius = this.size * 0.9; // Slight overlap with the player (10%)
+        const weaponPositionX = centerX + Math.cos(angle) * positionRadius;
+        const weaponPositionY = centerY + Math.sin(angle) * positionRadius;
         
-        // Rotate 
-        // Since the pistol sprite is pointing left by default, we need to add 180 degrees (PI radians)
-        // to make it point right, then apply our aim angle
+        // Translate to the weapon position on the circle's edge
+        ctx.translate(weaponPositionX, weaponPositionY);
+        
+        // Rotate to face outwards from the circle 
+        // The pistol image is pointing left by default, so we adjust:
+        // When angle = 0 (pointing right), we need to rotate 180 degrees
+        // When angle = 90 degrees (pointing down), we need to rotate 270 degrees
+        // etc.
         ctx.rotate(angle + Math.PI);
         
-        // Draw the weapon image
-        // Adjust size as needed
-        const weaponWidth = this.size * 2;
-        const weaponHeight = this.size * 1;
+        // Calculate weapon size (50% smaller than before)
+        const weaponWidth = this.size * 1.0; // Half the previous size
+        const weaponHeight = this.size * 0.5; // Half the previous size
         
-        // Position to create a 25% overlap with the player
-        // The pistol should be positioned so it looks like the player is holding it
-        const weaponX = -this.size * 0.75;  // 25% overlap
+        // Position the weapon so its handle aligns with the circle's edge
+        // Move it slightly left (since the image points left)
+        const weaponX = -weaponWidth * 0.3; // Adjust as needed for proper alignment
         const weaponY = -weaponHeight / 2;  // Center vertically
         
+        // Draw the weapon image with the adjusted size
         ctx.drawImage(weaponImage, weaponX, weaponY, weaponWidth, weaponHeight);
         
         // Restore the context state
