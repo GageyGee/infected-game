@@ -61,7 +61,7 @@ class Bullet {
 class SprayBullet extends Bullet {
     constructor(x, y, angle, speed, damage) {
         // Add a small random angle to create a spray effect
-        const spreadAngle = angle + (Math.random() - 0.2) * 0.4; // +/- 0.2 radians spread
+        const spreadAngle = angle + (Math.random() - 0.5) * 0.4; // +/- 0.2 radians spread
         super(x, y, spreadAngle, speed, damage, '#ffcc00', 2);
     }
 }
