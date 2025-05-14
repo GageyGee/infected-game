@@ -135,19 +135,38 @@ class Game {
     
     // Start the game loop
     startGameLoop() {
+        console.log("Starting game loop");
+        
         // Make sure any existing loop is cancelled first
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
         }
         
-        // Start a new loop
+        let lastFpsTime = performance.now();
+        let frameCount = 0;
+        
+        // Start a new loop with robust error handling
         const gameLoopFunction = (timestamp) => {
-            if (!this.running) return;
+            if (!this.running) {
+                console.log("Game loop stopped - game not running");
+                return;
+            }
             
             try {
-                // Calculate delta time in seconds
-                const deltaTime = (timestamp - this.lastTime) / 1000;
+                // Calculate delta time in seconds with safety limit
+                const deltaTime = Math.min((timestamp - this.lastTime) / 1000, 0.1);
                 this.lastTime = timestamp;
+                
+                // FPS counter
+                frameCount++;
+                if (timestamp - lastFpsTime > 1000) {
+                    // console.log(`FPS: ${Math.round(frameCount * 1000 / (timestamp - lastFpsTime))}`);
+                    frameCount = 0;
+                    lastFpsTime = timestamp;
+                    
+                    // Debug info
+                    console.log(`Game state: Level ${this.level}, Zombies: ${this.zombies.length}/${this.zombiesRemaining}`);
+                }
                 
                 // Clear the canvas
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -158,6 +177,20 @@ class Game {
                 
                 // Draw map boundaries
                 this.drawMapBoundaries();
+                
+                // Make sure we have zombies
+                if (this.zombies.length === 0 && this.zombiesToSpawn > 0 && !this.isSpawningZombies) {
+                    console.log("Forcing zombie spawn...");
+                    this.isSpawningZombies = true;
+                    
+                    // Force spawn a zombie
+                    this.spawnZombie();
+                    this.zombiesToSpawn--;
+                    this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
+                    updateElement('zombies', this.zombiesRemaining);
+                    
+                    this.isSpawningZombies = false;
+                }
                 
                 // Update the game state
                 this.update(deltaTime);
@@ -178,27 +211,78 @@ class Game {
                 this.animationFrameId = requestAnimationFrame(gameLoopFunction);
             } catch (error) {
                 console.error("Error in game loop:", error);
+                
                 // Try to recover
+                console.log("Attempting to recover...");
                 this.animationFrameId = requestAnimationFrame(gameLoopFunction);
             }
         };
         
         // Start the loop
         this.animationFrameId = requestAnimationFrame(gameLoopFunction);
-        console.log("Game loop started");
+        console.log("Game loop started, animation frame ID:", this.animationFrameId);
     }
     
     // Start the game from the start screen
     startGame() {
+        console.log("Starting game...");
+        
+        // Get player name
+        const playerName = this.playerNameInput.value.trim() || 'Player';
+        document.getElementById('player-name-display').textContent = playerName;
+        
+        // Set game state
         this.gameStarted = true;
+        
+        // Make sure we start with zombies
+        this.zombiesPerLevel = 5;
+        this.zombiesRemaining = this.zombiesPerLevel;
+        this.zombiesToSpawn = this.zombiesPerLevel;
+        
+        // Initialize the game with player at center of map
+        this.player = new Player(this.mapWidth/2, this.mapHeight/2);
+        
+        // Update UI elements
+        updateElement('health', this.player.health);
+        updateElement('level', 1);
+        updateElement('score', 0);
+        updateElement('zombies', this.zombiesRemaining);
+        
+        // Force spawn some initial zombies to get things going
+        for (let i = 0; i < 3; i++) {
+            this.spawnZombie();
+            this.zombiesToSpawn--;
+        }
+        
+        this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
+        updateElement('zombies', this.zombiesRemaining);
+        
+        // Start the game loop
         this.init();
+        
+        // Diagnostics
+        console.log(`Game started with ${this.zombies.length} zombies (${this.zombiesToSpawn} more to spawn)`);
     }
     
     // End the game and return to start screen
     endGame() {
+        console.log("Ending game");
+        
+        // Stop the game
+        this.running = false;
+        
+        // Destroy game objects
         this.destroy();
+        
+        // Hide game UI
         document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('game-ui').style.display = 'none';
+        
+        // Show start screen
         document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        console.log("Game ended, returned to start screen");
     }
     
     // Properly destroy the game instance
@@ -372,33 +456,58 @@ class Game {
 
     // Spawn a zombie
     spawnZombie() {
-        // Generate position outside of the screen but not too far
-        const margin = 200; // Margin outside the screen
-        const spawnAngle = Math.random() * Math.PI * 2; // Random angle around the player
-        const spawnDistance = Math.random() * 300 + 400; // Between 400 and 700 pixels away
-        
-        // Calculate position based on angle and distance
-        let x = this.player.x + Math.cos(spawnAngle) * spawnDistance;
-        let y = this.player.y + Math.sin(spawnAngle) * spawnDistance;
-        
-        // Clamp position to map boundaries
-        x = clamp(x, 50, this.mapWidth - 50);
-        y = clamp(y, 50, this.mapHeight - 50);
-        
-        // Generate zombie with appropriate stats for the level
-        const baseSpeed = 60 + Math.min(this.level * 5, 90);
-        const speed = baseSpeed * (0.8 + Math.random() * 0.4);
-        
-        const baseHealth = 50 + Math.min(this.level * 10, 250);
-        const health = baseHealth * (0.8 + Math.random() * 0.4);
-        
-        const baseSize = 15 + Math.min(this.level, 10);
-        const size = baseSize * (0.9 + Math.random() * 0.2);
-        
-        const zombie = new Zombie(x, y, speed, health, size);
-        
-        // Add zombie to list
-        this.zombies.push(zombie);
+        try {
+            // Generate position outside of the screen but not too far
+            const margin = 200; // Margin outside the screen
+            const spawnAngle = Math.random() * Math.PI * 2; // Random angle around the player
+            const spawnDistance = Math.random() * 300 + 400; // Between 400 and 700 pixels away
+            
+            // Calculate position based on angle and distance
+            let x = this.player.x + Math.cos(spawnAngle) * spawnDistance;
+            let y = this.player.y + Math.sin(spawnAngle) * spawnDistance;
+            
+            // Clamp position to map boundaries
+            x = clamp(x, 50, this.mapWidth - 50);
+            y = clamp(y, 50, this.mapHeight - 50);
+            
+            // Generate zombie with appropriate stats for the level
+            const baseSpeed = 60 + Math.min(this.level * 5, 90);
+            const speed = baseSpeed * (0.8 + Math.random() * 0.4);
+            
+            const baseHealth = 50 + Math.min(this.level * 10, 250);
+            const health = baseHealth * (0.8 + Math.random() * 0.4);
+            
+            const baseSize = 15 + Math.min(this.level, 10);
+            const size = baseSize * (0.9 + Math.random() * 0.2);
+            
+            // Create the zombie
+            const zombie = new Zombie(x, y, speed, health, size);
+            
+            // Add zombie to list
+            this.zombies.push(zombie);
+            
+            // Debug info
+            // console.log(`Spawned zombie at (${Math.round(x)}, ${Math.round(y)}), distance: ${Math.round(spawnDistance)}`);
+            
+            return zombie;
+        } catch (e) {
+            console.error("Error spawning zombie:", e);
+            // Try a simpler approach as fallback
+            try {
+                const zombie = new Zombie(
+                    this.player.x + 500, 
+                    this.player.y + 500, 
+                    80, 
+                    100, 
+                    20
+                );
+                this.zombies.push(zombie);
+                return zombie;
+            } catch (e2) {
+                console.error("Critical error spawning zombie:", e2);
+                return null;
+            }
+        }
     }
 
     // Spawn a powerup
@@ -820,61 +929,93 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Ensure any existing game is destroyed first
     if (window.gameInstance) {
-        window.gameInstance.destroy();
+        try {
+            window.gameInstance.destroy();
+        } catch (e) {
+            console.error("Error destroying old game:", e);
+        }
     }
     
     // Create fresh game instance
     window.gameInstance = new Game();
     
-    // Explicitly bind the start button
-    document.getElementById('start-game-button').addEventListener('click', () => {
-        console.log("Start game button clicked");
-        
-        // Make sure we have a clean game instance
-        if (window.gameInstance) {
-            window.gameInstance.destroy();
-            window.gameInstance = new Game();
-        }
-        
-        // Get player name
-        const playerName = document.getElementById('player-name').value.trim() || 'Player';
-        document.getElementById('player-name-display').textContent = playerName;
-        
-        // Hide start screen, show game UI
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('game-ui').classList.remove('hidden');
-        
-        // Start the game
-        window.gameInstance.startGame();
-    });
+    // Direct event binding to avoid any issues
+    const startButton = document.getElementById('start-game-button');
+    if (startButton) {
+        startButton.onclick = function() {
+            console.log("Start button clicked");
+            
+            try {
+                // Make sure start screen is hidden
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('game-ui').style.display = 'block';
+                document.getElementById('start-screen').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                
+                // Start the game
+                if (window.gameInstance) {
+                    window.gameInstance.startGame();
+                } else {
+                    console.error("No game instance found!");
+                    // Try to create a new one
+                    window.gameInstance = new Game();
+                    window.gameInstance.startGame();
+                }
+            } catch (e) {
+                console.error("Error starting game:", e);
+                alert("Error starting game. Please refresh the page and try again.");
+            }
+        };
+    } else {
+        console.error("Start button not found!");
+    }
     
     // Bind end game button
-    document.getElementById('end-game-button').addEventListener('click', () => {
-        console.log("End game button clicked");
-        if (window.gameInstance) {
-            window.gameInstance.endGame();
-        }
-    });
+    const endGameButton = document.getElementById('end-game-button');
+    if (endGameButton) {
+        endGameButton.onclick = function() {
+            console.log("End game button clicked");
+            try {
+                if (window.gameInstance) {
+                    window.gameInstance.endGame();
+                }
+            } catch (e) {
+                console.error("Error ending game:", e);
+            }
+        };
+    }
     
     // Also bind enter key on the name input
-    document.getElementById('player-name').addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('start-game-button').click();
-        }
-    });
+    const nameInput = document.getElementById('player-name');
+    if (nameInput) {
+        nameInput.onkeyup = function(e) {
+            if (e.key === 'Enter' && startButton) {
+                startButton.click();
+            }
+        };
+    }
     
     // Bind restart button
-    document.getElementById('restart-button').addEventListener('click', () => {
-        // Handle via game instance
-        if (window.gameInstance) {
-            window.gameInstance.gameOverElement.classList.add('hidden');
-            document.getElementById('game-ui').classList.remove('hidden');
-            window.gameInstance.init();
-        }
-    });
+    const restartButton = document.getElementById('restart-button');
+    if (restartButton) {
+        restartButton.onclick = function() {
+            try {
+                if (window.gameInstance) {
+                    document.getElementById('game-over').classList.add('hidden');
+                    document.getElementById('game-ui').classList.remove('hidden');
+                    window.gameInstance.init();
+                }
+            } catch (e) {
+                console.error("Error restarting game:", e);
+            }
+        };
+    }
     
     // Bind wallet connect button
-    document.getElementById('connect-wallet-button').addEventListener('click', () => {
-        showNotification("Wallet connection coming soon!");
-    });
+    const walletButton = document.getElementById('connect-wallet-button');
+    if (walletButton) {
+        walletButton.onclick = function() {
+            showNotification("Wallet connection coming soon!");
+        };
+    }
 });
