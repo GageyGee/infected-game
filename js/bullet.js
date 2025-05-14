@@ -1,7 +1,7 @@
 class Bullet {
     constructor(x, y, angle, speed, damage, playerRadius = 20, color = '#4deefc', radius = 4) {
         // Calculate starting position outside the player circle with padding
-        const padding = 10; // 10px padding as requested
+        const padding = 30; // 10px padding as requested
         const distanceFromCenter = playerRadius + padding;
         
         // Set bullet starting position outside the player circle
