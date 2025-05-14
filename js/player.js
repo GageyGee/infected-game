@@ -1,4 +1,8 @@
 class Player {
+    // Static properties to hold player sprite
+    static playerSprite = 'assets/zombies/s1.png';
+    static playerImage = null;
+    
     // Static properties to hold weapon sprites
     static weapons = {
         'pistol': 'assets/upgrades/pistol.png',
@@ -7,9 +11,25 @@ class Player {
     
     static weaponImages = {};
     
-    // Static initialization to load weapon images
-    static initWeaponSprites() {
-        // Only load once
+    // Static initialization to load images
+    static initSprites() {
+        // Initialize player sprite
+        if (!this.playerImage) {
+            const img = new Image();
+            
+            img.onload = () => {
+                console.log('Player sprite loaded successfully');
+            };
+            
+            img.onerror = () => {
+                console.error(`Failed to load player sprite: ${this.playerSprite}`);
+            };
+            
+            img.src = this.playerSprite;
+            this.playerImage = img;
+        }
+        
+        // Initialize weapon sprites
         if (Object.keys(this.weaponImages).length === 0) {
             // Load each weapon sprite
             for (const [type, src] of Object.entries(this.weapons)) {
@@ -32,15 +52,15 @@ class Player {
     }
 
     constructor(x, y) {
-        // Call the static init method to load weapon sprites
-        Player.initWeaponSprites();
+        // Call the static init method to load sprites
+        Player.initSprites();
         
         this.x = x;
         this.y = y;
         this.speed = 200; // Player movement speed
         this.baseSpeed = 200; // Base movement speed
         this.size = 20; // Player radius
-        this.color = '#3498db'; // Blue color
+        this.color = '#3498db'; // Blue color (fallback)
         this.maxHealth = 100;
         this.health = 100;
         this.weapon = 'pistol'; // Default weapon
@@ -273,25 +293,60 @@ class Player {
             ctx.stroke();
         }
         
-        // Damage flash effect
-        if (this.damageFlashTimer > 0) {
-            ctx.fillStyle = `rgba(255, 0, 0, ${this.damageFlashTimer * 2})`;
+        // Draw player sprite or fallback to circle
+        if (Player.playerImage && Player.playerImage.complete) {
+            // Draw player sprite with proper rotation
+            const spriteSize = this.size * 2.5; // Make sprite a bit larger than the collision circle
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            
+            // Rotate based on mouse position 
+            // Note: -Math.PI/2 offset because the sprite's eyes are looking down by default
+            ctx.rotate(this.aimAngle - Math.PI/2);
+            
+            // Draw the player sprite
+            ctx.drawImage(
+                Player.playerImage,
+                -spriteSize/2,
+                -spriteSize/2,
+                spriteSize,
+                spriteSize
+            );
+            
+            ctx.restore();
+            
+            // Damage flash effect as overlay
+            if (this.damageFlashTimer > 0) {
+                ctx.fillStyle = `rgba(255, 0, 0, ${this.damageFlashTimer * 2})`;
+                ctx.globalAlpha = this.damageFlashTimer * 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        } else {
+            // Fallback to drawing a circle if image fails to load
+            // Damage flash effect
+            if (this.damageFlashTimer > 0) {
+                ctx.fillStyle = `rgba(255, 0, 0, ${this.damageFlashTimer * 2})`;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw player body as circle (fallback)
+            ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(centerX, centerY, this.size, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Add glow based on current weapon
+            ctx.shadowColor = this.weapon === 'pistol' ? '#3498db' : '#ffcc00';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
-        
-        // Draw player body
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add glow based on current weapon
-        ctx.shadowColor = this.weapon === 'pistol' ? '#3498db' : '#ffcc00';
-        ctx.shadowBlur = 10;
-        ctx.fill();
-        ctx.shadowBlur = 0;
         
         // Draw the weapon
         this.drawWeapon(ctx, centerX, centerY, mouseX, mouseY);
@@ -368,7 +423,7 @@ class Player {
         }
     }
     
-// New method to draw the weapon
+// Draw weapon method
 drawWeapon(ctx, centerX, centerY, mouseX, mouseY) {
     // Only draw weapon if the image is loaded
     if (!Player.weaponImages[this.weapon] || !Player.weaponImages[this.weapon].complete) {
