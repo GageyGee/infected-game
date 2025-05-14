@@ -145,8 +145,13 @@ class Zombie {
 
     attack(player) {
         if (this.attackCooldown <= 0) {
-            // Deal damage to player (1/3 of player's health)
-            player.takeDamage(33.4); // Exactly 3 hits to kill (100/3 = 33.333...)
+            // Deal random damage between 15-30% of player's max health
+            const minDamage = player.maxHealth * 0.15;  // 15% of max health
+            const maxDamage = player.maxHealth * 0.30;  // 30% of max health
+            const damage = Math.floor(minDamage + Math.random() * (maxDamage - minDamage));
+            
+            // Deal damage to player
+            player.takeDamage(damage);
             
             // Apply knockback to zombie
             const knockbackDistance = 200;
