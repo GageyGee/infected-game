@@ -90,6 +90,7 @@ class Game {
         
         // Reset timers
         this.powerupSpawnTimer = this.powerupSpawnInterval / 2; // Spawn first powerup sooner
+        this.zombieSpawningPaused = false; // Make sure spawning isn't paused
         
         // Set initial zombies for level 1
         this.zombiesPerLevel = 5;
@@ -106,21 +107,12 @@ class Game {
         // Hide game over screen if visible
         this.gameOverElement.classList.add('hidden');
         
-        // Show level 1 popup
+        // Show level 1 popup (this will pause zombie spawning until it fades)
         this.showLevelPopup(1);
         
         // Start the game loop
         this.lastTime = performance.now();
         requestAnimationFrame(this.gameLoop.bind(this));
-        
-        // Spawn initial zombies to make sure they appear
-        for (let i = 0; i < 5; i++) {
-            this.spawnZombie();
-        }
-        
-        // Update zombie count
-        this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
-        updateElement('zombies', this.zombiesRemaining);
     }
     
     // Start the game from the start screen
@@ -229,8 +221,8 @@ class Game {
             // Level complete - advance to next level
             this.level++;
             
-            // Calculate zombies for new level (2.5x previous level)
-            this.zombiesPerLevel = Math.ceil(this.zombiesPerLevel * 2.5);
+            // Calculate zombies for new level (double each level)
+            this.zombiesPerLevel = this.level === 1 ? 5 : this.zombiesPerLevel * 2;
             this.zombiesRemaining = this.zombiesPerLevel;
             this.zombiesToSpawn = this.zombiesPerLevel;
             
@@ -274,8 +266,8 @@ class Game {
             }
         }
         
-        // Spawn zombies if needed
-        if (this.zombiesToSpawn > 0) {
+        // Spawn zombies if needed and not paused
+        if (this.zombiesToSpawn > 0 && !this.zombieSpawningPaused) {
             // Calculate how many zombies to spawn this frame
             const baseSpawnRate = 1 + (this.level * 0.1); // Increase with level
             const zombiesToSpawnNow = Math.min(
@@ -309,14 +301,36 @@ class Game {
 
     // Spawn a zombie
     spawnZombie() {
-        // Generate position outside of the screen but not too far
-        const margin = 200; // Margin outside the screen
-        const spawnAngle = Math.random() * Math.PI * 2; // Random angle around the player
-        const spawnDistance = Math.random() * 300 + 400; // Between 400 and 700 pixels away
+        // Determine spawn method: 70% chance for map-wide spawn, 30% chance for player-relative spawn
+        const useRandomPosition = Math.random() < 0.7;
         
-        // Calculate position based on angle and distance
-        let x = this.player.x + Math.cos(spawnAngle) * spawnDistance;
-        let y = this.player.y + Math.sin(spawnAngle) * spawnDistance;
+        let x, y;
+        
+        if (useRandomPosition) {
+            // Random position on the map (with margin from edges)
+            const margin = 200;
+            x = margin + Math.random() * (this.mapWidth - 2 * margin);
+            y = margin + Math.random() * (this.mapHeight - 2 * margin);
+            
+            // Make sure zombie isn't too close to the player
+            const minDistanceToPlayer = 400;
+            const distToPlayer = distance(x, y, this.player.x, this.player.y);
+            
+            // If too close to player, adjust position
+            if (distToPlayer < minDistanceToPlayer) {
+                const angle = getAngle(this.player.x, this.player.y, x, y);
+                x = this.player.x + Math.cos(angle) * minDistanceToPlayer;
+                y = this.player.y + Math.sin(angle) * minDistanceToPlayer;
+            }
+        } else {
+            // Generate position relative to the player
+            const spawnAngle = Math.random() * Math.PI * 2; // Random angle around the player
+            const spawnDistance = Math.random() * 300 + 400; // Between 400 and 700 pixels away
+            
+            // Calculate position based on angle and distance
+            x = this.player.x + Math.cos(spawnAngle) * spawnDistance;
+            y = this.player.y + Math.sin(spawnAngle) * spawnDistance;
+        }
         
         // Clamp position to map boundaries
         x = clamp(x, 50, this.mapWidth - 50);
@@ -625,9 +639,13 @@ class Game {
         popup.innerHTML = `<div class="level-number">LEVEL ${level}</div><div class="level-text">GET READY!</div>`;
         document.getElementById('game-container').appendChild(popup);
         
-        // Remove the popup after animation completes
+        // Pause zombie spawning while popup is visible
+        this.zombieSpawningPaused = true;
+        
+        // Resume spawning after popup is removed (after animation completes)
         setTimeout(() => {
             popup.remove();
+            this.zombieSpawningPaused = false;
         }, 2000);
     }
 
