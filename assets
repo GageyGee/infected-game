@@ -1,0 +1,46 @@
+# Game Assets
+
+This directory is reserved for game assets like sprites, sounds, and other media files.
+
+## Future Assets
+
+When upgrading the game visuals, you can add the following types of assets here:
+
+### Sprites
+- Player character sprite (replacing the blue circle)
+- Zombie sprites (replacing the green circles)
+- Power-up item sprites
+- Bullet sprites
+- Background textures
+
+### Audio
+- Background music
+- Shooting sound effects
+- Zombie groans and attack sounds
+- Power-up pickup sounds
+- Game over sound
+- Wave completion jingles
+
+### Other
+- Game logo
+- UI elements and icons
+
+## Asset Organization
+
+When adding assets, consider organizing them into subdirectories like:
+
+```
+assets/
+├── sprites/
+│   ├── player/
+│   ├── zombies/
+│   └── items/
+├── audio/
+│   ├── music/
+│   └── sfx/
+└── ui/
+```
+
+## Asset Credits
+
+When using assets from external sources, be sure to include proper attribution and ensure you have the rights to use them. Document all asset sources here.
