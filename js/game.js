@@ -9,7 +9,6 @@ class Game {
         // Game state
         this.running = false;
         this.level = 1;
-        this.wave = 1;
         this.score = 0;
         this.gameOver = false;
         this.gameStarted = false;
@@ -50,14 +49,10 @@ class Game {
         this.powerupSpawnTimer = 0;
         this.powerupSpawnInterval = 30; // Seconds between powerup spawns
         
-        // Wave control
-        this.zombiesPerWave = 5; // Initial number of zombies
+        // Zombie control
+        this.zombiesPerLevel = 5; // Initial number of zombies (level 1)
         this.zombiesRemaining = 0;
-        this.wavesPerLevel = 3; // 3 waves per level
-        this.currentWaveInLevel = 1;
-        this.waveDelay = 5; // Seconds between waves
-        this.waveTimer = 0;
-        this.waveActive = false;
+        this.zombiesToSpawn = 0;
         
         // Minimap
         this.minimapRadius = 80;
@@ -71,38 +66,58 @@ class Game {
         this.startGameButton = document.getElementById('start-game-button');
         this.connectWalletButton = document.getElementById('connect-wallet-button');
         
+        // Animation frame ID for cancellation
+        this.animationFrameId = null;
+        
+        // Debug timers
+        this.lastDebugTime = 0;
+        this.stuckZombieTimer = 0;
+        
         // Bind event listeners
         this.bindEventListeners();
     }
 
     // Initialize the game
     init() {
-        // Clear all game state first to prevent stacking
-        this.clearGameState();
+        console.log("Initializing game");
+        
+        // Stop any existing game
+        if (this.running) {
+            this.destroy();
+        }
         
         this.resizeCanvas();
         this.running = true;
         this.gameOver = false;
         this.level = 1;
-        this.wave = 1;
-        this.currentWaveInLevel = 1;
         this.score = 0;
+        
+        // Reset game objects
+        this.zombies = [];
+        this.bullets = [];
+        this.powerups = [];
+        
+        // Create player
         this.player = new Player(this.mapWidth/2, this.mapHeight/2);
         this.worldOffsetX = this.player.x - this.canvas.width / 2;
         this.worldOffsetY = this.player.y - this.canvas.height / 2;
+        
+        // Reset timers
         this.powerupSpawnTimer = this.powerupSpawnInterval / 2; // Spawn first powerup sooner
-        this.waveTimer = 3; // Short delay before first wave
-        this.waveActive = false;
-        this.zombiesPerWave = 5;
-        this.nukeEffect = 0;
+        this.lastDebugTime = 0;
+        this.stuckZombieTimer = 0;
+        
+        // Set initial zombies for level 1
+        this.zombiesPerLevel = 5;
+        this.zombiesRemaining = this.zombiesPerLevel;
+        this.zombiesToSpawn = this.zombiesPerLevel;
         
         // Update UI
         updateElement('health', this.player.health);
         updateElement('level', this.level);
         updateElement('score', this.score);
         updateElement('score-top', this.score);
-        updateElement('wave', this.wave);
-        updateElement('zombies', 0);
+        updateElement('zombies', this.zombiesRemaining);
         updateElement('current-weapon', 'PISTOL');
         
         // Hide game over screen if visible
@@ -110,104 +125,114 @@ class Game {
         
         console.log("Game initialized! Starting game loop...");
         
+        // Show level 1 popup
+        this.showLevelPopup(1);
+        
         // Start the game loop
         this.lastTime = performance.now();
-        requestAnimationFrame(this.gameLoop.bind(this));
-        
-        // Spawn initial zombies to make sure they appear
-        for (let i = 0; i < 5; i++) {
-            this.spawnZombie();
-        }
-        updateElement('zombies', this.zombies.length);
+        this.startGameLoop();
     }
     
-    // Clear game state to prevent stacking
-    clearGameState() {
-        this.zombies = [];
-        this.bullets = [];
-        this.powerups = [];
-        // Cancel any ongoing animations or timers
+    // Start the game loop
+    startGameLoop() {
+        // Make sure any existing loop is cancelled first
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
         }
+        
+        // Start a new loop
+        const gameLoopFunction = (timestamp) => {
+            if (!this.running) return;
+            
+            try {
+                // Calculate delta time in seconds
+                const deltaTime = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+                
+                // Clear the canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw background grid
+                drawGrid(this.ctx, this.gridSize, this.worldOffsetX, this.worldOffsetY, 
+                         this.canvas.width, this.canvas.height);
+                
+                // Draw map boundaries
+                this.drawMapBoundaries();
+                
+                // Update the game state
+                this.update(deltaTime);
+                
+                // Draw the game objects
+                this.draw();
+                
+                // Draw minimap
+                this.drawMinimap();
+                
+                // Decay nuke effect
+                if (this.nukeEffect > 0) {
+                    this.nukeEffect -= deltaTime * 2;
+                    if (this.nukeEffect < 0) this.nukeEffect = 0;
+                }
+                
+                // Request next frame
+                this.animationFrameId = requestAnimationFrame(gameLoopFunction);
+            } catch (error) {
+                console.error("Error in game loop:", error);
+                // Try to recover
+                this.animationFrameId = requestAnimationFrame(gameLoopFunction);
+            }
+        };
+        
+        // Start the loop
+        this.animationFrameId = requestAnimationFrame(gameLoopFunction);
+        console.log("Game loop started");
     }
-
+    
     // Start the game from the start screen
     startGame() {
-        const playerName = this.playerNameInput.value.trim() || 'Player';
-        updateElement('player-name-display', playerName);
-        
-        this.startScreenElement.classList.add('hidden');
-        document.getElementById('game-ui').classList.remove('hidden');
-        
-        // Clear any existing game state to prevent stacking
-        this.running = false;
-        this.zombies = [];
-        this.bullets = [];
-        this.powerups = [];
-        
         this.gameStarted = true;
         this.init();
     }
     
     // End the game and return to start screen
     endGame() {
-        this.running = false;
+        this.destroy();
         document.getElementById('game-ui').classList.add('hidden');
-        this.startScreenElement.classList.remove('hidden');
+        document.getElementById('start-screen').classList.remove('hidden');
+    }
+    
+    // Properly destroy the game instance
+    destroy() {
+        console.log("Destroying game instance");
+        this.running = false;
         
-        // Clean up game objects to prevent stacking
+        // Cancel animation frame
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        
+        // Clear all game objects
         this.zombies = [];
         this.bullets = [];
         this.powerups = [];
-        this.player = new Player(this.mapWidth/2, this.mapHeight/2);
+        
+        // Remove any level popups
+        const existingPopups = document.querySelectorAll('.level-popup');
+        existingPopups.forEach(popup => popup.remove());
+        
+        // Clear any notifications
+        const notifications = document.querySelectorAll('.powerup-notification');
+        notifications.forEach(notification => notification.remove());
     }
-
-    // Main game loop
-    gameLoop(timestamp) {
-        if (!this.running) return;
-        
-        // Calculate delta time in seconds
-        const deltaTime = (timestamp - this.lastTime) / 1000;
-        this.lastTime = timestamp;
-        
-        // Clear the canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw background grid
-        drawGrid(this.ctx, this.gridSize, this.worldOffsetX, this.worldOffsetY, 
-                 this.canvas.width, this.canvas.height);
-        
-        // Draw map boundaries
-        this.drawMapBoundaries();
-        
-        // Update the game state
-        this.update(deltaTime);
-        
-        // Draw the game objects
-        this.draw();
-        
-        // Draw minimap
-        this.drawMinimap();
-        
-        // Decay nuke effect
-        if (this.nukeEffect > 0) {
-            this.nukeEffect -= deltaTime * 2;
-            if (this.nukeEffect < 0) this.nukeEffect = 0;
-        }
-        
-        // Request next frame
-        this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
-    }
-
+    
     // Update game state
     update(deltaTime) {
         // Cap delta time to prevent huge jumps
         const dt = Math.min(deltaTime, 0.1);
         
-        // Handle wave mechanics
-        this.updateWaves(dt);
+        // Handle level progression and zombie spawning
+        this.updateLevelAndZombies(dt);
         
         // Update player
         this.player.update(dt, this.keys);
@@ -236,83 +261,67 @@ class Game {
                 this.bullets.push(...bullets);
             }
         }
+        
+        // Debug info every 5 seconds
+        if (performance.now() - this.lastDebugTime > 5000) {
+            console.log(`Game state: Level ${this.level}, Zombies: ${this.zombies.length}/${this.zombiesRemaining}`);
+            this.lastDebugTime = performance.now();
+        }
     }
 
-    // Update wave mechanics
-    updateWaves(deltaTime) {
-        // If no active wave, count down to next wave
-        if (!this.waveActive) {
-            this.waveTimer -= deltaTime;
+    // Update level progression and zombie spawning
+    updateLevelAndZombies(deltaTime) {
+        // Check if level is complete
+        if (this.zombies.length === 0 && this.zombiesToSpawn === 0) {
+            // Level complete - advance to next level
+            this.level++;
             
-            if (this.waveTimer <= 0) {
-                this.startWave();
-            }
-        } else {
-            // Debug logging for zombie counts
-            if (this.lastDebugTime === undefined || performance.now() - this.lastDebugTime > 5000) {
-                console.log(`Active zombies: ${this.zombies.length}, Remaining to spawn: ${this.zombiesRemaining}`);
-                this.lastDebugTime = performance.now();
-            }
+            // Calculate zombies for new level (2.5x previous level)
+            this.zombiesPerLevel = Math.ceil(this.zombiesPerLevel * 2.5);
+            this.zombiesRemaining = this.zombiesPerLevel;
+            this.zombiesToSpawn = this.zombiesPerLevel;
             
-            // Check if wave is complete
-            if (this.zombies.length === 0 && this.zombiesRemaining === 0) {
-                this.waveActive = false;
-                this.waveTimer = this.waveDelay;
-                
-                // Check if this was the last wave of the level
-                if (this.currentWaveInLevel >= this.wavesPerLevel) {
-                    this.level++;
-                    this.currentWaveInLevel = 1;
-                    updateElement('level', this.level);
-                    
-                    // Show level up popup
-                    this.showLevelPopup(this.level);
-                    
-                    // Add extra healing between levels
-                    const healAmount = 35;
-                    this.player.heal(healAmount);
-                    showNotification(`LEVEL ${this.level} REACHED! +${healAmount} HEALTH`);
-                } else {
-                    this.currentWaveInLevel++;
-                    
-                    // Add some healing between waves
-                    const healAmount = 15;
-                    this.player.heal(healAmount);
-                    showNotification(`WAVE COMPLETE! +${healAmount} HEALTH`);
-                }
-            }
+            // Update UI
+            updateElement('level', this.level);
+            updateElement('zombies', this.zombiesRemaining);
             
-            // Periodically check for stuck zombies
-            this.stuckZombieTimer = (this.stuckZombieTimer || 0) + deltaTime;
+            // Show level popup
+            this.showLevelPopup(this.level);
             
-            if (this.stuckZombieTimer > 5) { // Check every 5 seconds
-                this.stuckZombieTimer = 0;
-                this.checkForStuckZombies();
-            }
+            // Add healing between levels
+            const healAmount = 35;
+            this.player.heal(healAmount);
+            showNotification(`LEVEL ${this.level}! +${healAmount} HEALTH`);
+            
+            console.log(`Advanced to level ${this.level} with ${this.zombiesPerLevel} zombies`);
+        }
+        
+        // Check for stuck zombies periodically
+        this.stuckZombieTimer += deltaTime;
+        if (this.stuckZombieTimer > 5) { // Every 5 seconds
+            this.checkForStuckZombies();
+            this.stuckZombieTimer = 0;
         }
         
         // Spawn zombies if needed
-        if (this.waveActive && this.zombiesRemaining > 0) {
-            // Spawn zombies gradually instead of all at once
-            const spawnRate = 0.5 + this.level * 0.1; // Base + level-based rate
-            const zombiesToSpawn = Math.min(
-                Math.floor(deltaTime * spawnRate * 2), // Double the spawn rate
-                this.zombiesRemaining
+        if (this.zombiesToSpawn > 0) {
+            // Calculate how many zombies to spawn this frame
+            const baseSpawnRate = 1 + (this.level * 0.1); // Increase with level
+            const zombiesToSpawnNow = Math.min(
+                Math.ceil(deltaTime * baseSpawnRate), 
+                this.zombiesToSpawn,
+                3 // Cap per frame to prevent too many at once
             );
             
-            for (let i = 0; i < zombiesToSpawn; i++) {
+            // Spawn zombies
+            for (let i = 0; i < zombiesToSpawnNow; i++) {
                 this.spawnZombie();
+                this.zombiesToSpawn--;
                 this.zombiesRemaining--;
             }
             
-            // Ensure at least one zombie spawns if we haven't spawned any in a while
-            this.timeSinceLastSpawn = (this.timeSinceLastSpawn || 0) + deltaTime;
-            if (this.timeSinceLastSpawn > 3 && this.zombiesRemaining > 0) { // No zombies spawned for 3 seconds
-                this.spawnZombie();
-                this.zombiesRemaining--;
-                this.timeSinceLastSpawn = 0;
-                console.log("Forced zombie spawn due to delay");
-            }
+            // Update UI
+            updateElement('zombies', this.zombiesRemaining);
         }
         
         // Spawn powerups occasionally
@@ -327,7 +336,7 @@ class Game {
     checkForStuckZombies() {
         if (this.zombies.length === 0) return;
         
-        console.log(`Checking for stuck zombies. Total: ${this.zombies.length}`);
+        // console.log(`Checking for stuck zombies. Total: ${this.zombies.length}`);
         
         for (let i = this.zombies.length - 1; i >= 0; i--) {
             const zombie = this.zombies[i];
@@ -339,52 +348,22 @@ class Game {
                 
                 // Move stuck zombie toward player with increased speed
                 const angle = getAngle(zombie.x, zombie.y, this.player.x, this.player.y);
-                zombie.x = this.player.x + Math.cos(angle) * 1000; // Reposition closer to player
-                zombie.y = this.player.y + Math.sin(angle) * 1000;
+                zombie.x = this.player.x + Math.cos(angle) * 800; // Reposition closer to player
+                zombie.y = this.player.y + Math.sin(angle) * 800;
                 
-                console.log(`Repositioned stuck zombie at distance ${distToPlayer}`);
+                // console.log(`Repositioned stuck zombie at distance ${distToPlayer}`);
                 
                 // If zombie has been stuck multiple times, just remove it
                 zombie.stuckCount = (zombie.stuckCount || 0) + 1;
                 if (zombie.stuckCount > 3) {
-                    console.log("Removing repeatedly stuck zombie");
+                    // console.log("Removing repeatedly stuck zombie");
                     this.zombies.splice(i, 1);
                     
                     // Make sure UI is updated
-                    updateElement('zombies', this.zombies.length + this.zombiesRemaining);
+                    updateElement('zombies', this.zombiesRemaining);
                 }
             }
         }
-    }
-
-    // Start a new wave
-    startWave() {
-        this.wave++;
-        this.waveActive = true;
-        
-        // Calculate zombies based on level and wave within the level
-        const baseZombies = 5;
-        const levelMultiplier = this.level;
-        const waveMultiplier = this.currentWaveInLevel;
-        
-        this.zombiesPerWave = baseZombies + (levelMultiplier - 1) * 3 + (waveMultiplier - 1) * 2;
-        this.zombiesRemaining = this.zombiesPerWave;
-        
-        // Update UI
-        updateElement('wave', this.wave);
-        updateElement('zombies', this.zombiesPerWave);
-        
-        showNotification(`WAVE ${this.wave} STARTED: ${this.zombiesPerWave} ZOMBIES`);
-        
-        // Spawn some zombies immediately
-        const initialSpawn = Math.min(3, this.zombiesRemaining);
-        for (let i = 0; i < initialSpawn; i++) {
-            this.spawnZombie();
-            this.zombiesRemaining--;
-        }
-        updateElement('zombies', this.zombies.length + this.zombiesRemaining);
-        
-        console.log(`Wave ${this.wave} started with ${this.zombiesPerWave} zombies (${this.zombies.length} spawned initially)`);
     }
 
     // Spawn a zombie
@@ -416,7 +395,6 @@ class Game {
         
         // Add zombie to list
         this.zombies.push(zombie);
-        updateElement('zombies', this.zombies.length + this.zombiesRemaining);
     }
 
     // Spawn a powerup
@@ -468,7 +446,7 @@ class Game {
         }
         
         // Update UI with current zombie count
-        updateElement('zombies', this.zombies.length + this.zombiesRemaining);
+        updateElement('zombies', this.zombiesRemaining);
     }
 
     // Update bullets
@@ -597,8 +575,8 @@ class Game {
         this.ctx.arc(playerX, playerY, 4, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Draw zombies
-        this.ctx.fillStyle = '#2ecc71';
+        // Draw zombies (in RED)
+        this.ctx.fillStyle = '#e74c3c';
         for (const zombie of this.zombies) {
             const zombieX = mapX + (zombie.x / this.mapWidth) * mapSize;
             const zombieY = mapY + (zombie.y / this.mapHeight) * mapSize;
@@ -717,6 +695,24 @@ class Game {
         }
     }
 
+    // Show level popup
+    showLevelPopup(level) {
+        // Remove any existing popups
+        const existingPopups = document.querySelectorAll('.level-popup');
+        existingPopups.forEach(popup => popup.remove());
+        
+        // Create the popup
+        const popup = document.createElement('div');
+        popup.className = 'level-popup';
+        popup.innerHTML = `<div class="level-number">LEVEL ${level}</div><div class="level-text">GET READY!</div>`;
+        document.getElementById('game-container').appendChild(popup);
+        
+        // Remove the popup after animation completes
+        setTimeout(() => {
+            popup.remove();
+        }, 2000);
+    }
+
     // Show game over screen
     showGameOver() {
         // Update final score
@@ -797,29 +793,6 @@ class Game {
                 this.mouseY = e.touches[0].clientY;
             }
         });
-        
-        // Start game button
-        this.startGameButton.addEventListener('click', () => {
-            this.startGame();
-        });
-        
-        // Connect wallet button (does nothing for now)
-        this.connectWalletButton.addEventListener('click', () => {
-            // Future wallet connection logic will go here
-            showNotification("Wallet connection coming soon!");
-        });
-        
-        // Restart button
-        this.restartButton.addEventListener('click', () => {
-            this.init();
-        });
-        
-        // For enter key in name input
-        this.playerNameInput.addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') {
-                this.startGame();
-            }
-        });
     }
 }
 
@@ -827,30 +800,33 @@ class Game {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM Loaded - Creating game instance");
     
-    // Ensure we only have one game instance
+    // Ensure any existing game is destroyed first
     if (window.gameInstance) {
         window.gameInstance.destroy();
     }
     
-    // Create a new game instance
+    // Create fresh game instance
     window.gameInstance = new Game();
     
-    // Explicitly bind the start button to ensure it works
+    // Explicitly bind the start button
     document.getElementById('start-game-button').addEventListener('click', () => {
         console.log("Start game button clicked");
         
-        // Ensure we destroy any existing game before starting a new one
+        // Make sure we have a clean game instance
         if (window.gameInstance) {
             window.gameInstance.destroy();
             window.gameInstance = new Game();
         }
         
+        // Get player name
         const playerName = document.getElementById('player-name').value.trim() || 'Player';
         document.getElementById('player-name-display').textContent = playerName;
         
+        // Hide start screen, show game UI
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('game-ui').classList.remove('hidden');
         
+        // Start the game
         window.gameInstance.startGame();
     });
     
@@ -866,6 +842,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('player-name').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') {
             document.getElementById('start-game-button').click();
+        }
+    });
+    
+    // Bind restart button
+    document.getElementById('restart-button').addEventListener('click', () => {
+        // Handle via game instance
+        if (window.gameInstance) {
+            window.gameInstance.gameOverElement.classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            window.gameInstance.init();
         }
     });
     
