@@ -8,7 +8,7 @@ class Zombie {
         this.health = health;
         this.size = size;
         this.color = '#2ecc71'; // Green color
-        this.damage = 10; // Damage per hit
+        this.damage = 33; // Damage per hit (3 hits to kill)
         this.attackCooldown = 0;
         this.knockback = 0;
         this.knockbackAngle = 0;
