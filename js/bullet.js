@@ -1,5 +1,5 @@
 class Bullet {
-    constructor(x, y, angle, speed, damage, color = '#4deefc', radius = 3) {
+    constructor(x, y, angle, speed, damage, color = '#4deefc', radius = 4) {
         this.x = x;
         this.y = y;
         this.angle = angle;
@@ -8,6 +8,7 @@ class Bullet {
         this.color = color;
         this.radius = radius;
         this.active = true;
+        this.tailLength = 10; // Add a slight bullet tail
     }
 
     update(deltaTime) {
@@ -17,14 +18,31 @@ class Bullet {
     }
 
     draw(ctx, offsetX, offsetY) {
+        const screenX = this.x - offsetX;
+        const screenY = this.y - offsetY;
+        
+        // Draw bullet (round)
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(this.x - offsetX, this.y - offsetY, this.radius, 0, Math.PI * 2);
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Draw bullet tail
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.radius * 1.5;
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY);
+        ctx.lineTo(
+            screenX - Math.cos(this.angle) * this.tailLength,
+            screenY - Math.sin(this.angle) * this.tailLength
+        );
+        ctx.stroke();
         
         // Add a glow effect
         ctx.shadowColor = this.color;
         ctx.shadowBlur = 5;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
     }
