@@ -1,4 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800&display=swap');
+#end-game-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ff6b6b, #8c1d1d);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#end-game-button:hover {
+    background: linear-gradient(135deg, #ff8484, #aa2424);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 75, 75, 0.4);
+}@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800&display=swap');
 
 * {
     margin: 0;
