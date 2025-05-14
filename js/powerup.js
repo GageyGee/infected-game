@@ -107,7 +107,6 @@ class Powerup {
                 const zombieCount = game.zombies.length;
                 game.score += zombieCount;
                 updateElement('score', game.score);
-                updateElement('score-top', game.score);
                 
                 // Visual effect for nuke
                 game.nukeEffect = 1.0; // Start the nuke visual effect
