@@ -77,6 +77,9 @@ class Game {
 
     // Initialize the game
     init() {
+        // Clear all game state first to prevent stacking
+        this.clearGameState();
+        
         this.resizeCanvas();
         this.running = true;
         this.gameOver = false;
@@ -84,9 +87,6 @@ class Game {
         this.wave = 1;
         this.currentWaveInLevel = 1;
         this.score = 0;
-        this.zombies = [];
-        this.bullets = [];
-        this.powerups = [];
         this.player = new Player(this.mapWidth/2, this.mapHeight/2);
         this.worldOffsetX = this.player.x - this.canvas.width / 2;
         this.worldOffsetY = this.player.y - this.canvas.height / 2;
@@ -120,6 +120,18 @@ class Game {
         }
         updateElement('zombies', this.zombies.length);
     }
+    
+    // Clear game state to prevent stacking
+    clearGameState() {
+        this.zombies = [];
+        this.bullets = [];
+        this.powerups = [];
+        // Cancel any ongoing animations or timers
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
 
     // Start the game from the start screen
     startGame() {
@@ -129,8 +141,27 @@ class Game {
         this.startScreenElement.classList.add('hidden');
         document.getElementById('game-ui').classList.remove('hidden');
         
+        // Clear any existing game state to prevent stacking
+        this.running = false;
+        this.zombies = [];
+        this.bullets = [];
+        this.powerups = [];
+        
         this.gameStarted = true;
         this.init();
+    }
+    
+    // End the game and return to start screen
+    endGame() {
+        this.running = false;
+        document.getElementById('game-ui').classList.add('hidden');
+        this.startScreenElement.classList.remove('hidden');
+        
+        // Clean up game objects to prevent stacking
+        this.zombies = [];
+        this.bullets = [];
+        this.powerups = [];
+        this.player = new Player(this.mapWidth/2, this.mapHeight/2);
     }
 
     // Main game loop
@@ -167,7 +198,7 @@ class Game {
         }
         
         // Request next frame
-        requestAnimationFrame(this.gameLoop.bind(this));
+        this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
     }
 
     // Update game state
@@ -763,6 +794,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM Loaded - Creating game instance");
     const game = new Game();
     
+    // Make sure we only have one instance of game running at a time
+    window.gameInstance = game;
+    
     // Explicitly bind the start button to ensure it works
     document.getElementById('start-game-button').addEventListener('click', () => {
         console.log("Start game button clicked");
@@ -774,6 +808,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         game.gameStarted = true;
         game.init();
+    });
+    
+    // Bind end game button
+    document.getElementById('end-game-button').addEventListener('click', () => {
+        console.log("End game button clicked");
+        game.endGame();
     });
     
     // Also bind enter key on the name input
