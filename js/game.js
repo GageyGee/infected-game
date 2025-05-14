@@ -1,120 +1,4 @@
-// Draw minimap
-    drawMinimap() {
-        const padding = 20;
-        const x = padding + this.minimapRadius;
-        const y = this.canvas.height - padding - this.minimapRadius;
-        
-        // Draw background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, this.minimapRadius, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Draw map borders
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        this.ctx.lineWidth = 2;
-        
-        // Calculate map rect on minimap
-        const mapX = x - this.minimapRadius;
-        const mapY = y - this.minimapRadius;
-        const mapSize = this.minimapRadius * 2;
-        
-        this.ctx.strokeRect(mapX, mapY, mapSize, mapSize);
-        
-        // Draw player position
-        const playerX = mapX + (this.player.x / this.mapWidth) * mapSize;
-        const playerY = mapY + (this.player.y / this.mapHeight) * mapSize;
-        
-        this.ctx.fillStyle = '#3498db';
-        this.ctx.beginPath();
-        this.ctx.arc(playerX, playerY, 4, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Draw zombies
-        this.ctx.fillStyle = '#2ecc71';
-        for (const zombie of this.zombies) {
-            const zombieX = mapX + (zombie.x / this.mapWidth) * mapSize;
-            const zombieY = mapY + (zombie.y / this.mapHeight) * mapSize;
-            
-            // Only draw if within minimap circle
-            if (distance(zombieX, zombieY, x, y) <= this.minimapRadius) {
-                this.ctx.beginPath();
-                this.ctx.arc(zombieX, zombieY, 2, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-        }
-        
-        // Draw power-ups
-        for (const powerup of this.powerups) {
-            const powerupX = mapX + (powerup.x / this.mapWidth) * mapSize;
-            const powerupY = mapY + (powerup.y / this.mapHeight) * mapSize;
-            
-            // Only draw if within minimap circle
-            if (distance(powerupX, powerupY, x, y) <= this.minimapRadius) {
-                this.ctx.fillStyle = powerup.color;
-                this.ctx.beginPath();
-                this.ctx.arc(powerupX, powerupY, 3, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-        }
-        
-        // Draw view frustum (what's visible on screen)
-        const viewX = mapX + (this.worldOffsetX / this.mapWidth) * mapSize;
-        const viewY = mapY + (this.worldOffsetY / this.mapHeight) * mapSize;
-        const viewWidth = (this.canvas.width / this.mapWidth) * mapSize;
-        const viewHeight = (this.canvas.height / this.mapHeight) * mapSize;
-        
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(viewX, viewY, viewWidth, viewHeight);
-        
-        // Draw minimap border
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, this.minimapRadius, 0, Math.PI * 2);
-        this.ctx.stroke();
-    }
-    
-    // Draw map boundaries
-    drawMapBoundaries() {
-        const boundaryThickness = 20;
-        const boundaryColor = 'rgba(255, 0, 0, 0.2)';
-        
-        // Convert map coordinates to screen coordinates
-        const left = 0 - this.worldOffsetX;
-        const top = 0 - this.worldOffsetY;
-        const right = this.mapWidth - this.worldOffsetX;
-        const bottom = this.mapHeight - this.worldOffsetY;
-        
-        this.ctx.fillStyle = boundaryColor;
-        
-        // Draw boundaries only if they're visible on screen
-        
-        // Left boundary
-        if (left < this.canvas.width) {
-            this.ctx.fillRect(left - boundaryThickness, top - boundaryThickness, 
-                             boundaryThickness, this.mapHeight + boundaryThickness * 2);
-        }
-        
-        // Right boundary
-        if (right > 0) {
-            this.ctx.fillRect(right, top - boundaryThickness, 
-                             boundaryThickness, this.mapHeight + boundaryThickness * 2);
-        }
-        
-        // Top boundary
-        if (top < this.canvas.height) {
-            this.ctx.fillRect(left, top - boundaryThickness, 
-                             this.mapWidth, boundaryThickness);
-        }
-        
-        // Bottom boundary
-        if (bottom > 0) {
-            this.ctx.fillRect(left, bottom, 
-                             this.mapWidth, boundaryThickness);
-        }
-    }// Main game class
+// Main game class
 class Game {
     constructor() {
         // Canvas setup
@@ -466,6 +350,10 @@ class Game {
             // Update zombie
             zombie.update(deltaTime, this.player.x, this.player.y);
             
+            // Keep zombies within map boundaries
+            zombie.x = clamp(zombie.x, zombie.size, this.mapWidth - zombie.size);
+            zombie.y = clamp(zombie.y, zombie.size, this.mapHeight - zombie.size);
+            
             // Remove inactive zombies
             if (!zombie.active) {
                 this.zombies.splice(i, 1);
@@ -587,6 +475,124 @@ class Game {
         this.player.draw(this.ctx);
     }
 
+    // Draw minimap
+    drawMinimap() {
+        const padding = 20;
+        const x = padding + this.minimapRadius;
+        const y = this.canvas.height - padding - this.minimapRadius;
+        
+        // Draw background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, this.minimapRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Draw map borders
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.lineWidth = 2;
+        
+        // Calculate map rect on minimap
+        const mapX = x - this.minimapRadius;
+        const mapY = y - this.minimapRadius;
+        const mapSize = this.minimapRadius * 2;
+        
+        this.ctx.strokeRect(mapX, mapY, mapSize, mapSize);
+        
+        // Draw player position
+        const playerX = mapX + (this.player.x / this.mapWidth) * mapSize;
+        const playerY = mapY + (this.player.y / this.mapHeight) * mapSize;
+        
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.beginPath();
+        this.ctx.arc(playerX, playerY, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Draw zombies
+        this.ctx.fillStyle = '#2ecc71';
+        for (const zombie of this.zombies) {
+            const zombieX = mapX + (zombie.x / this.mapWidth) * mapSize;
+            const zombieY = mapY + (zombie.y / this.mapHeight) * mapSize;
+            
+            // Only draw if within minimap circle
+            if (distance(zombieX, zombieY, x, y) <= this.minimapRadius) {
+                this.ctx.beginPath();
+                this.ctx.arc(zombieX, zombieY, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+        
+        // Draw power-ups
+        for (const powerup of this.powerups) {
+            const powerupX = mapX + (powerup.x / this.mapWidth) * mapSize;
+            const powerupY = mapY + (powerup.y / this.mapHeight) * mapSize;
+            
+            // Only draw if within minimap circle
+            if (distance(powerupX, powerupY, x, y) <= this.minimapRadius) {
+                this.ctx.fillStyle = powerup.color;
+                this.ctx.beginPath();
+                this.ctx.arc(powerupX, powerupY, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+        
+        // Draw view frustum (what's visible on screen)
+        const viewX = mapX + (this.worldOffsetX / this.mapWidth) * mapSize;
+        const viewY = mapY + (this.worldOffsetY / this.mapHeight) * mapSize;
+        const viewWidth = (this.canvas.width / this.mapWidth) * mapSize;
+        const viewHeight = (this.canvas.height / this.mapHeight) * mapSize;
+        
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(viewX, viewY, viewWidth, viewHeight);
+        
+        // Draw minimap border
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, this.minimapRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+    }
+    
+    // Draw map boundaries
+    drawMapBoundaries() {
+        const boundaryThickness = 20;
+        const boundaryColor = 'rgba(255, 0, 0, 0.2)';
+        
+        // Convert map coordinates to screen coordinates
+        const left = 0 - this.worldOffsetX;
+        const top = 0 - this.worldOffsetY;
+        const right = this.mapWidth - this.worldOffsetX;
+        const bottom = this.mapHeight - this.worldOffsetY;
+        
+        this.ctx.fillStyle = boundaryColor;
+        
+        // Draw boundaries only if they're visible on screen
+        
+        // Left boundary
+        if (left < this.canvas.width) {
+            this.ctx.fillRect(left - boundaryThickness, top - boundaryThickness, 
+                             boundaryThickness, this.mapHeight + boundaryThickness * 2);
+        }
+        
+        // Right boundary
+        if (right > 0) {
+            this.ctx.fillRect(right, top - boundaryThickness, 
+                             boundaryThickness, this.mapHeight + boundaryThickness * 2);
+        }
+        
+        // Top boundary
+        if (top < this.canvas.height) {
+            this.ctx.fillRect(left, top - boundaryThickness, 
+                             this.mapWidth, boundaryThickness);
+        }
+        
+        // Bottom boundary
+        if (bottom > 0) {
+            this.ctx.fillRect(left, bottom, 
+                             this.mapWidth, boundaryThickness);
+        }
+    }
+
     // Show game over screen
     showGameOver() {
         // Update final score
@@ -695,10 +701,12 @@ class Game {
 
 // Initialize the game when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Loaded - Creating game instance");
     const game = new Game();
     
     // Explicitly bind the start button to ensure it works
     document.getElementById('start-game-button').addEventListener('click', () => {
+        console.log("Start game button clicked");
         const playerName = document.getElementById('player-name').value.trim() || 'Player';
         document.getElementById('player-name-display').textContent = playerName;
         
