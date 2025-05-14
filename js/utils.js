@@ -32,7 +32,12 @@ function degToRad(deg) {
 
 // Update HTML element text content
 function updateElement(id, value) {
-    document.getElementById(id).textContent = value;
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    } else {
+        console.warn(`Element with ID '${id}' not found`);
+    }
 }
 
 // Show notification
