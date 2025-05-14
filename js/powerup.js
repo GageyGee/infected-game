@@ -1,7 +1,8 @@
 class Powerup {
     // Static properties to hold sprite images
     static sprites = {
-        'nuke': 'assets/upgrades/nuke.png'
+        'nuke': 'assets/upgrades/nuke.png',
+        'spray': 'assets/upgrades/spray.png'
         // Add other powerup images here if needed in the future
     };
     
@@ -90,10 +91,10 @@ class Powerup {
         const screenX = this.x - offsetX;
         const screenY = this.y - offsetY;
         
-        // Special case for nuke - use image if available
-        if (this.type === 'nuke' && 
-            Powerup.images.nuke && 
-            Powerup.images.nuke.complete) {
+        // Check if we should use an image for this powerup type
+        if ((this.type === 'nuke' || this.type === 'spray') && 
+            Powerup.images[this.type] && 
+            Powerup.images[this.type].complete) {
             
             // Draw glowing effect behind image
             const glowSize = this.radius + 5 * this.pulseValue;
@@ -102,10 +103,18 @@ class Powerup {
             ctx.arc(screenX, screenY, glowSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // Draw the nuke image
+            // Draw color circle behind image for added effect
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, this.radius * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // Draw the powerup image
             const imageSize = this.radius * 2.5;
             ctx.drawImage(
-                Powerup.images.nuke,
+                Powerup.images[this.type],
                 screenX - imageSize/2,
                 screenY - imageSize/2,
                 imageSize,
