@@ -317,10 +317,14 @@ class Game {
             for (let i = 0; i < zombiesToSpawnNow; i++) {
                 this.spawnZombie();
                 this.zombiesToSpawn--;
-                this.zombiesRemaining--;
             }
             
-            // Update UI
+            // Update UI - always show total zombies left (both spawned and yet to spawn)
+            this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
+            updateElement('zombies', this.zombiesRemaining);
+        } else {
+            // No more to spawn, just count active zombies
+            this.zombiesRemaining = this.zombies.length;
             updateElement('zombies', this.zombiesRemaining);
         }
         
@@ -413,6 +417,8 @@ class Game {
 
     // Update zombies
     updateZombies(deltaTime) {
+        let zombiesRemoved = false;
+        
         for (let i = this.zombies.length - 1; i >= 0; i--) {
             const zombie = this.zombies[i];
             
@@ -426,6 +432,7 @@ class Game {
             // Remove inactive zombies
             if (!zombie.active) {
                 this.zombies.splice(i, 1);
+                zombiesRemoved = true;
                 continue;
             }
             
@@ -445,12 +452,17 @@ class Game {
             }
         }
         
-        // Update UI with current zombie count
-        updateElement('zombies', this.zombiesRemaining);
+        // Update the zombie counter if any were removed
+        if (zombiesRemoved) {
+            this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
+            updateElement('zombies', this.zombiesRemaining);
+        }
     }
 
     // Update bullets
     updateBullets(deltaTime) {
+        let zombieKilled = false;
+        
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             
@@ -478,9 +490,9 @@ class Game {
                     const killed = zombie.takeDamage(bullet.damage, bullet.angle);
                     
                     if (killed) {
+                        zombieKilled = true;
                         this.score++;
                         updateElement('score', this.score);
-                        updateElement('score-top', this.score);
                     }
                     
                     hit = true;
@@ -492,6 +504,12 @@ class Game {
             if (hit) {
                 this.bullets.splice(i, 1);
             }
+        }
+        
+        // Update zombie count if any died
+        if (zombieKilled) {
+            this.zombiesRemaining = this.zombies.length + this.zombiesToSpawn;
+            updateElement('zombies', this.zombiesRemaining);
         }
     }
 
@@ -566,17 +584,8 @@ class Game {
         const mapY = y - this.minimapRadius;
         const mapSize = this.minimapRadius * 2;
         
-        // Draw player position
-        const playerX = mapX + (this.player.x / this.mapWidth) * mapSize;
-        const playerY = mapY + (this.player.y / this.mapHeight) * mapSize;
-        
-        this.ctx.fillStyle = '#3498db';
-        this.ctx.beginPath();
-        this.ctx.arc(playerX, playerY, 4, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Draw zombies (in RED)
-        this.ctx.fillStyle = '#e74c3c';
+        // Draw zombies (in RED) - just one circle per zombie
+        this.ctx.fillStyle = '#e74c3c';  // Red color for zombies
         for (const zombie of this.zombies) {
             const zombieX = mapX + (zombie.x / this.mapWidth) * mapSize;
             const zombieY = mapY + (zombie.y / this.mapHeight) * mapSize;
@@ -643,6 +652,15 @@ class Game {
             this.ctx.lineTo(mapX + mapSize, mapY + mapSize);
             this.ctx.stroke();
         }
+        
+        // Draw player position last to be on top
+        this.ctx.fillStyle = '#3498db';  // Blue color for player
+        const playerX = mapX + (this.player.x / this.mapWidth) * mapSize;
+        const playerY = mapY + (this.player.y / this.mapHeight) * mapSize;
+        
+        this.ctx.beginPath();
+        this.ctx.arc(playerX, playerY, 3, 0, Math.PI * 2);
+        this.ctx.fill();
         
         // Restore the canvas context
         this.ctx.restore();
