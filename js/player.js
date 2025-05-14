@@ -90,7 +90,7 @@ class Player {
         
         // Shooting properties
         this.fireRate = {
-            pistol: 0.5, // 2 shots per second (previously 1.0 which was 1 shot per second)
+            pistol: 1, // 2 shots per second (previously 1.0 which was 1 shot per second)
             spray: 0.2  // 5 shots per second for spray gun
         };
         
