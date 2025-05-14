@@ -50,27 +50,27 @@ class Powerup {
         // Config based on type
         switch(this.type) {
             case 'spray':
-                this.color = '#ffcc00'; // Gold color for spray gun
+                this.color = '#7acb39'; // Gold color for spray gun
                 this.duration = 10000; // 10 seconds duration
                 this.name = 'SPRAY GUN';
                 break;
             case 'nuke':
-                this.color = '#ff4d4d'; // Red color for nuke
+                this.color = '#ffcb2c'; // Red color for nuke
                 this.duration = null; // Instant effect
                 this.name = 'NUKE';
                 break;
             case 'shield':
-                this.color = '#3498db'; // Blue color for shield
+                this.color = '#9adaff'; // Blue color for shield
                 this.duration = 15000; // 15 seconds duration
                 this.name = 'SHIELD';
                 break;
             case 'speed':
-                this.color = '#1abc9c'; // Turquoise color for speed
+                this.color = '#57bcf0'; // Turquoise color for speed
                 this.duration = 12000; // 12 seconds duration
                 this.name = 'SPEED BOOST';
                 break;
             case 'regeneration':
-                this.color = '#2ecc71'; // Green color for regeneration
+                this.color = '#FFB6C1'; // Green color for regeneration
                 this.duration = 8000; // 8 seconds duration
                 this.name = 'REGENERATION';
                 break;
