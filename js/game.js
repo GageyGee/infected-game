@@ -241,6 +241,32 @@ class Game {
                     showNotification(`WAVE COMPLETE! +${healAmount} HEALTH`);
                 }
             }
+            
+            // Check for stuck zombies (zombies far away from player for too long)
+            if (this.zombies.length > 0 && this.zombiesRemaining === 0) {
+                for (let i = this.zombies.length - 1; i >= 0; i--) {
+                    const zombie = this.zombies[i];
+                    const distToPlayer = distance(zombie.x, zombie.y, this.player.x, this.player.y);
+                    
+                    // If zombie is too far away for too long, force it to move toward player
+                    if (distToPlayer > 1500) {
+                        // Move stuck zombie toward player
+                        const angle = getAngle(zombie.x, zombie.y, this.player.x, this.player.y);
+                        zombie.x += Math.cos(angle) * 100 * deltaTime;
+                        zombie.y += Math.sin(angle) * 100 * deltaTime;
+                        
+                        // If still too far after 10 seconds, eliminate it
+                        zombie.stuckTime = (zombie.stuckTime || 0) + deltaTime;
+                        if (zombie.stuckTime > 10) {
+                            this.zombies.splice(i, 1);
+                            showNotification("FOUND A STUCK ZOMBIE!");
+                        }
+                    } else {
+                        zombie.stuckTime = 0; // Reset stuck timer if in range
+                    }
+                }
+                updateElement('zombies', this.zombies.length);
+            }
         }
         
         // Spawn zombies if needed
@@ -481,22 +507,21 @@ class Game {
         const x = padding + this.minimapRadius;
         const y = this.canvas.height - padding - this.minimapRadius;
         
-        // Draw background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        // Create clipping region for circle
+        this.ctx.save();
         this.ctx.beginPath();
         this.ctx.arc(x, y, this.minimapRadius, 0, Math.PI * 2);
-        this.ctx.fill();
+        this.ctx.clip();
         
-        // Draw map borders
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        this.ctx.lineWidth = 2;
+        // Draw background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(x - this.minimapRadius, y - this.minimapRadius, 
+                         this.minimapRadius * 2, this.minimapRadius * 2);
         
-        // Calculate map rect on minimap
+        // Calculate map area on minimap
         const mapX = x - this.minimapRadius;
         const mapY = y - this.minimapRadius;
         const mapSize = this.minimapRadius * 2;
-        
-        this.ctx.strokeRect(mapX, mapY, mapSize, mapSize);
         
         // Draw player position
         const playerX = mapX + (this.player.x / this.mapWidth) * mapSize;
@@ -513,12 +538,9 @@ class Game {
             const zombieX = mapX + (zombie.x / this.mapWidth) * mapSize;
             const zombieY = mapY + (zombie.y / this.mapHeight) * mapSize;
             
-            // Only draw if within minimap circle
-            if (distance(zombieX, zombieY, x, y) <= this.minimapRadius) {
-                this.ctx.beginPath();
-                this.ctx.arc(zombieX, zombieY, 2, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
+            this.ctx.beginPath();
+            this.ctx.arc(zombieX, zombieY, 2, 0, Math.PI * 2);
+            this.ctx.fill();
         }
         
         // Draw power-ups
@@ -526,13 +548,10 @@ class Game {
             const powerupX = mapX + (powerup.x / this.mapWidth) * mapSize;
             const powerupY = mapY + (powerup.y / this.mapHeight) * mapSize;
             
-            // Only draw if within minimap circle
-            if (distance(powerupX, powerupY, x, y) <= this.minimapRadius) {
-                this.ctx.fillStyle = powerup.color;
-                this.ctx.beginPath();
-                this.ctx.arc(powerupX, powerupY, 3, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
+            this.ctx.fillStyle = powerup.color;
+            this.ctx.beginPath();
+            this.ctx.arc(powerupX, powerupY, 3, 0, Math.PI * 2);
+            this.ctx.fill();
         }
         
         // Draw view frustum (what's visible on screen)
@@ -544,6 +563,46 @@ class Game {
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
         this.ctx.lineWidth = 1;
         this.ctx.strokeRect(viewX, viewY, viewWidth, viewHeight);
+        
+        // Draw map boundaries if player is near them
+        const boundaryWidth = 3;
+        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+        this.ctx.lineWidth = boundaryWidth;
+        
+        // Left boundary - only if close
+        if (this.player.x < this.mapWidth * 0.2) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(mapX, mapY);
+            this.ctx.lineTo(mapX, mapY + mapSize);
+            this.ctx.stroke();
+        }
+        
+        // Right boundary - only if close
+        if (this.player.x > this.mapWidth * 0.8) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(mapX + mapSize, mapY);
+            this.ctx.lineTo(mapX + mapSize, mapY + mapSize);
+            this.ctx.stroke();
+        }
+        
+        // Top boundary - only if close
+        if (this.player.y < this.mapHeight * 0.2) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(mapX, mapY);
+            this.ctx.lineTo(mapX + mapSize, mapY);
+            this.ctx.stroke();
+        }
+        
+        // Bottom boundary - only if close
+        if (this.player.y > this.mapHeight * 0.8) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(mapX, mapY + mapSize);
+            this.ctx.lineTo(mapX + mapSize, mapY + mapSize);
+            this.ctx.stroke();
+        }
+        
+        // Restore the canvas context
+        this.ctx.restore();
         
         // Draw minimap border
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
