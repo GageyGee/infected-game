@@ -15,6 +15,11 @@ class Player {
         this.invulnerableTimer = 0;
         this.damageFlashTimer = 0; // Visual feedback for taking damage
         
+        // Knockback properties
+        this.knockbackForce = 0;
+        this.knockbackAngle = 0;
+        this.knockbackRecovery = 10; // How quickly knockback fades
+        
         // Power-up timers and effects
         this.shieldActive = false;
         this.shieldTimer = 0;
@@ -28,7 +33,7 @@ class Player {
         // Shooting properties
         this.fireRate = {
             pistol: 1.0, // 1 shot per second
-            spray: 0.2   // 5 shots per second for spray gun
+            spray: 0.2  // 5 shots per second for spray gun
         };
         
         this.bulletDamage = {
@@ -60,8 +65,19 @@ class Player {
         const currentSpeed = this.speedBoostActive ? this.speed * 1.5 : this.speed;
         
         // Apply movement
-        this.x += dx * currentSpeed * deltaTime;
-        this.y += dy * currentSpeed * deltaTime;
+        if (this.knockbackForce > 0) {
+            // Apply knockback force
+            this.x += Math.cos(this.knockbackAngle) * this.knockbackForce * deltaTime;
+            this.y += Math.sin(this.knockbackAngle) * this.knockbackForce * deltaTime;
+            
+            // Reduce knockback force
+            this.knockbackForce -= this.knockbackRecovery * deltaTime * 60;
+            if (this.knockbackForce < 0) this.knockbackForce = 0;
+        } else {
+            // Normal movement
+            this.x += dx * currentSpeed * deltaTime;
+            this.y += dy * currentSpeed * deltaTime;
+        }
         
         // Update weapon timer
         if (this.weapon !== 'pistol' && this.weaponTimer > 0) {
@@ -118,6 +134,12 @@ class Player {
                 this.regenerationActive = false;
             }
         }
+    }
+    
+    // Apply knockback to player
+    applyKnockback(angle, force) {
+        this.knockbackForce = force;
+        this.knockbackAngle = angle;
     }
 
     draw(ctx) {
