@@ -224,8 +224,17 @@ class Game {
         // Hide game over screen if visible
         this.gameOverElement.classList.add('hidden');
         
+        console.log("Game initialized! Starting game loop...");
+        
         // Start the game loop
+        this.lastTime = performance.now();
         requestAnimationFrame(this.gameLoop.bind(this));
+        
+        // Spawn initial zombies to make sure they appear
+        for (let i = 0; i < 5; i++) {
+            this.spawnZombie();
+        }
+        updateElement('zombies', this.zombies.length);
     }
 
     // Start the game from the start screen
@@ -391,6 +400,16 @@ class Game {
         updateElement('zombies', this.zombiesPerWave);
         
         showNotification(`WAVE ${this.wave} STARTED: ${this.zombiesPerWave} ZOMBIES`);
+        
+        // Spawn some zombies immediately
+        const initialSpawn = Math.min(3, this.zombiesRemaining);
+        for (let i = 0; i < initialSpawn; i++) {
+            this.spawnZombie();
+            this.zombiesRemaining--;
+        }
+        updateElement('zombies', this.zombies.length + this.zombiesRemaining);
+        
+        console.log(`Wave ${this.wave} started with ${this.zombiesPerWave} zombies (${this.zombies.length} spawned initially)`);
     }
 
     // Spawn a zombie
@@ -575,6 +594,13 @@ class Game {
         
         // Show game over element
         this.gameOverElement.classList.remove('hidden');
+        
+        // Make sure restart button is properly bound
+        document.getElementById('restart-button').addEventListener('click', () => {
+            this.gameOverElement.classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            this.init();
+        });
     }
 
     // Resize canvas to fit window
@@ -670,5 +696,28 @@ class Game {
 // Initialize the game when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
-    // Don't auto-start; wait for Start Game button
+    
+    // Explicitly bind the start button to ensure it works
+    document.getElementById('start-game-button').addEventListener('click', () => {
+        const playerName = document.getElementById('player-name').value.trim() || 'Player';
+        document.getElementById('player-name-display').textContent = playerName;
+        
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+        
+        game.gameStarted = true;
+        game.init();
+    });
+    
+    // Also bind enter key on the name input
+    document.getElementById('player-name').addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('start-game-button').click();
+        }
+    });
+    
+    // Bind wallet connect button
+    document.getElementById('connect-wallet-button').addEventListener('click', () => {
+        showNotification("Wallet connection coming soon!");
+    });
 });
