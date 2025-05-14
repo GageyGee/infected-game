@@ -1,9 +1,9 @@
 class Zombie {
     // Static properties to hold sprite images
     static sprites = [
-        'https://i.ibb.co/7fMNSfx/s3.png',
-        'https://i.ibb.co/BVbbHv5/s4.png',  // Fixed URL (removed the m)
-        'https://i.ibb.co/Cs0nhJ2/s2.png'   // Fixed URL (removed the W)
+        'https://i.ibb.co/7fMNSfx/s3.png',    // This URL seems to work
+        'https://i.ibb.co/wBr3xb8/s4.png',    // Fixed URL
+        'https://i.ibb.co/JCJbrvZ/s2.png'     // Fixed URL
     ];
     
     static images = [];
@@ -12,12 +12,22 @@ class Zombie {
     static initSprites() {
         // Only load once
         if (this.images.length === 0) {
-            this.sprites.forEach(src => {
+            this.sprites.forEach((src, index) => {
                 const img = new Image();
+                
+                // Log when each image loads or fails
+                img.onload = () => {
+                    console.log(`Zombie sprite ${index + 1} loaded successfully`);
+                };
+                
+                img.onerror = () => {
+                    console.error(`Failed to load zombie sprite ${index + 1}: ${src}`);
+                };
+                
                 img.src = src;
                 this.images.push(img);
             });
-            console.log("Zombie sprites loaded:", this.images.length);
+            console.log("Zombie sprites initialized:", this.sprites.length);
         }
     }
 
@@ -132,7 +142,7 @@ class Zombie {
                 
                 ctx.save();
                 ctx.translate(screenX, screenY);
-                ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
+                ctx.rotate(this.facingAngle - Math.PI/2); // Fix rotation to face direction of movement correctly
                 ctx.drawImage(
                     zombieImage,
                     -spriteSize/2,
@@ -183,7 +193,7 @@ class Zombie {
             
             ctx.save();
             ctx.translate(screenX, screenY);
-            ctx.rotate(this.facingAngle + Math.PI/2); // Rotate to face direction of movement
+            ctx.rotate(this.facingAngle - Math.PI/2); // Fix rotation to face direction of movement correctly
             ctx.drawImage(
                 zombieImage,
                 -spriteSize/2,
