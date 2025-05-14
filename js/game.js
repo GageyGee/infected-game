@@ -431,7 +431,9 @@ class Game {
             this.canvas.width,
             this.canvas.height,
             this.worldOffsetX,
-            this.worldOffsetY
+            this.worldOffsetY,
+            this.mapWidth,
+            this.mapHeight
         );
         
         this.powerups.push(powerup);
@@ -603,11 +605,15 @@ class Game {
         
         // Mouse input
         this.canvas.addEventListener('mousedown', (e) => {
-            this.mouseDown = true;
+            if (e.button === 0) { // Left click
+                this.mouseDown = true;
+            }
         });
         
         window.addEventListener('mouseup', (e) => {
-            this.mouseDown = false;
+            if (e.button === 0) { // Left click
+                this.mouseDown = false;
+            }
         });
         
         window.addEventListener('mousemove', (e) => {
@@ -636,9 +642,27 @@ class Game {
             }
         });
         
+        // Start game button
+        this.startGameButton.addEventListener('click', () => {
+            this.startGame();
+        });
+        
+        // Connect wallet button (does nothing for now)
+        this.connectWalletButton.addEventListener('click', () => {
+            // Future wallet connection logic will go here
+            showNotification("Wallet connection coming soon!");
+        });
+        
         // Restart button
         this.restartButton.addEventListener('click', () => {
             this.init();
+        });
+        
+        // For enter key in name input
+        this.playerNameInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                this.startGame();
+            }
         });
     }
 }
@@ -646,5 +670,5 @@ class Game {
 // Initialize the game when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
-    game.init();
+    // Don't auto-start; wait for Start Game button
 });
