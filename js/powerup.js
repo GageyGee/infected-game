@@ -4,7 +4,8 @@ class Powerup {
         'nuke': 'assets/upgrades/nuke.png',
         'spray': 'assets/upgrades/spray.png',
         'speed': 'assets/upgrades/speed.png',
-        'shield': 'assets/upgrades/shield.png'
+        'shield': 'assets/upgrades/shield.png',
+        'regeneration': 'assets/upgrades/recharge.png'
         // Add other powerup images here if needed in the future
     };
     
