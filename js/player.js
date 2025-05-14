@@ -1,5 +1,40 @@
 class Player {
+    // Static properties to hold weapon sprites
+    static weapons = {
+        'pistol': 'assets/upgrades/pistol.png',
+        // Add other weapon sprites if needed
+    };
+    
+    static weaponImages = {};
+    
+    // Static initialization to load weapon images
+    static initWeaponSprites() {
+        // Only load once
+        if (Object.keys(this.weaponImages).length === 0) {
+            // Load each weapon sprite
+            for (const [type, src] of Object.entries(this.weapons)) {
+                const img = new Image();
+                
+                img.onload = () => {
+                    console.log(`${type} weapon sprite loaded successfully`);
+                };
+                
+                img.onerror = () => {
+                    console.error(`Failed to load ${type} weapon sprite: ${src}`);
+                };
+                
+                img.src = src;
+                this.weaponImages[type] = img;
+            }
+            
+            console.log("Weapon sprites initialized");
+        }
+    }
+
     constructor(x, y) {
+        // Call the static init method to load weapon sprites
+        Player.initWeaponSprites();
+        
         this.x = x;
         this.y = y;
         this.speed = 200; // Player movement speed
@@ -14,6 +49,9 @@ class Player {
         this.invulnerable = false; // Invulnerability after taking damage
         this.invulnerableTimer = 0;
         this.damageFlashTimer = 0; // Visual feedback for taking damage
+        
+        // Add a property to track the current aim angle
+        this.aimAngle = 0;
         
         // Knockback properties
         this.knockbackForce = 0;
@@ -142,10 +180,13 @@ class Player {
         this.knockbackAngle = angle;
     }
 
-    draw(ctx) {
+    draw(ctx, mouseX, mouseY) {
         // Player is always drawn at the center of the screen
         const centerX = ctx.canvas.width / 2;
         const centerY = ctx.canvas.height / 2;
+        
+        // Calculate angle to mouse position
+        this.aimAngle = getAngle(centerX, centerY, mouseX, mouseY);
         
         // Draw health bar
         const barWidth = this.size * 2;
@@ -252,6 +293,9 @@ class Player {
         ctx.fill();
         ctx.shadowBlur = 0;
         
+        // Draw the weapon
+        this.drawWeapon(ctx, centerX, centerY, mouseX, mouseY);
+        
         // Weapon indicator
         if (this.weapon === 'spray') {
             // Draw small spray gun indicator dots
@@ -322,6 +366,45 @@ class Player {
                 ctx.fillText(`${timer.name}: ${timeLeft.toFixed(1)}s`, centerX, y);
             }
         }
+    }
+    
+    // New method to draw the weapon
+    drawWeapon(ctx, centerX, centerY, mouseX, mouseY) {
+        // Only draw weapon if the image is loaded
+        if (!Player.weaponImages[this.weapon] || !Player.weaponImages[this.weapon].complete) {
+            return;
+        }
+        
+        const weaponImage = Player.weaponImages[this.weapon];
+        
+        // Calculate the angle to the mouse
+        const angle = getAngle(centerX, centerY, mouseX, mouseY);
+        
+        // Save the context state
+        ctx.save();
+        
+        // Translate to the player's position
+        ctx.translate(centerX, centerY);
+        
+        // Rotate 
+        // Since the pistol sprite is pointing left by default, we need to add 180 degrees (PI radians)
+        // to make it point right, then apply our aim angle
+        ctx.rotate(angle + Math.PI);
+        
+        // Draw the weapon image
+        // Adjust size as needed
+        const weaponWidth = this.size * 2;
+        const weaponHeight = this.size * 1;
+        
+        // Position to create a 25% overlap with the player
+        // The pistol should be positioned so it looks like the player is holding it
+        const weaponX = -this.size * 0.75;  // 25% overlap
+        const weaponY = -weaponHeight / 2;  // Center vertically
+        
+        ctx.drawImage(weaponImage, weaponX, weaponY, weaponWidth, weaponHeight);
+        
+        // Restore the context state
+        ctx.restore();
     }
 
     shoot(mouseX, mouseY, currentTime) {
