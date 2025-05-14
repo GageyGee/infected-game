@@ -399,8 +399,8 @@ class Player {
         ctx.rotate(angle + Math.PI);
         
         // Calculate weapon size (50% smaller than before)
-        const weaponWidth = this.size * 1.0; // Half the previous size
-        const weaponHeight = this.size * 0.3; // Half the previous size
+        const weaponWidth = this.size * 1.2; // Half the previous size
+        const weaponHeight = this.size * 0.7; // Half the previous size
         
         // Position the weapon so its handle aligns with the circle's edge
         // Move it slightly left (since the image points left)
