@@ -47,7 +47,7 @@ class Game {
         // Game timing
         this.lastTime = 0;
         this.powerupSpawnTimer = 0;
-        this.powerupSpawnInterval = 30; // Seconds between powerup spawns
+        this.powerupSpawnInterval = 12; // Seconds between powerup spawns
         
         // Zombie control
         this.zombiesPerLevel = 5; // Initial number of zombies (level 1)
