@@ -248,6 +248,12 @@ class Game {
                 this.startWave();
             }
         } else {
+            // Debug logging for zombie counts
+            if (this.lastDebugTime === undefined || performance.now() - this.lastDebugTime > 5000) {
+                console.log(`Active zombies: ${this.zombies.length}, Remaining to spawn: ${this.zombiesRemaining}`);
+                this.lastDebugTime = performance.now();
+            }
+            
             // Check if wave is complete
             if (this.zombies.length === 0 && this.zombiesRemaining === 0) {
                 this.waveActive = false;
@@ -258,6 +264,9 @@ class Game {
                     this.level++;
                     this.currentWaveInLevel = 1;
                     updateElement('level', this.level);
+                    
+                    // Show level up popup
+                    this.showLevelPopup(this.level);
                     
                     // Add extra healing between levels
                     const healAmount = 35;
@@ -273,30 +282,12 @@ class Game {
                 }
             }
             
-            // Check for stuck zombies (zombies far away from player for too long)
-            if (this.zombies.length > 0 && this.zombiesRemaining === 0) {
-                for (let i = this.zombies.length - 1; i >= 0; i--) {
-                    const zombie = this.zombies[i];
-                    const distToPlayer = distance(zombie.x, zombie.y, this.player.x, this.player.y);
-                    
-                    // If zombie is too far away for too long, force it to move toward player
-                    if (distToPlayer > 1500) {
-                        // Move stuck zombie toward player
-                        const angle = getAngle(zombie.x, zombie.y, this.player.x, this.player.y);
-                        zombie.x += Math.cos(angle) * 100 * deltaTime;
-                        zombie.y += Math.sin(angle) * 100 * deltaTime;
-                        
-                        // If still too far after 10 seconds, eliminate it
-                        zombie.stuckTime = (zombie.stuckTime || 0) + deltaTime;
-                        if (zombie.stuckTime > 10) {
-                            this.zombies.splice(i, 1);
-                            showNotification("FOUND A STUCK ZOMBIE!");
-                        }
-                    } else {
-                        zombie.stuckTime = 0; // Reset stuck timer if in range
-                    }
-                }
-                updateElement('zombies', this.zombies.length);
+            // Periodically check for stuck zombies
+            this.stuckZombieTimer = (this.stuckZombieTimer || 0) + deltaTime;
+            
+            if (this.stuckZombieTimer > 5) { // Check every 5 seconds
+                this.stuckZombieTimer = 0;
+                this.checkForStuckZombies();
             }
         }
         
@@ -305,13 +296,22 @@ class Game {
             // Spawn zombies gradually instead of all at once
             const spawnRate = 0.5 + this.level * 0.1; // Base + level-based rate
             const zombiesToSpawn = Math.min(
-                Math.floor(deltaTime * spawnRate), 
+                Math.floor(deltaTime * spawnRate * 2), // Double the spawn rate
                 this.zombiesRemaining
             );
             
             for (let i = 0; i < zombiesToSpawn; i++) {
                 this.spawnZombie();
                 this.zombiesRemaining--;
+            }
+            
+            // Ensure at least one zombie spawns if we haven't spawned any in a while
+            this.timeSinceLastSpawn = (this.timeSinceLastSpawn || 0) + deltaTime;
+            if (this.timeSinceLastSpawn > 3 && this.zombiesRemaining > 0) { // No zombies spawned for 3 seconds
+                this.spawnZombie();
+                this.zombiesRemaining--;
+                this.timeSinceLastSpawn = 0;
+                console.log("Forced zombie spawn due to delay");
             }
         }
         
@@ -320,6 +320,40 @@ class Game {
         if (this.powerupSpawnTimer <= 0) {
             this.spawnPowerup();
             this.powerupSpawnTimer = this.powerupSpawnInterval * (0.8 + Math.random() * 0.4); // Vary interval slightly
+        }
+    }
+    
+    // Check for stuck zombies and handle them
+    checkForStuckZombies() {
+        if (this.zombies.length === 0) return;
+        
+        console.log(`Checking for stuck zombies. Total: ${this.zombies.length}`);
+        
+        for (let i = this.zombies.length - 1; i >= 0; i--) {
+            const zombie = this.zombies[i];
+            const distToPlayer = distance(zombie.x, zombie.y, this.player.x, this.player.y);
+            
+            // If zombie is too far away or stuck in a boundary
+            if (distToPlayer > 1500 || zombie.x <= 0 || zombie.x >= this.mapWidth || 
+                zombie.y <= 0 || zombie.y >= this.mapHeight) {
+                
+                // Move stuck zombie toward player with increased speed
+                const angle = getAngle(zombie.x, zombie.y, this.player.x, this.player.y);
+                zombie.x = this.player.x + Math.cos(angle) * 1000; // Reposition closer to player
+                zombie.y = this.player.y + Math.sin(angle) * 1000;
+                
+                console.log(`Repositioned stuck zombie at distance ${distToPlayer}`);
+                
+                // If zombie has been stuck multiple times, just remove it
+                zombie.stuckCount = (zombie.stuckCount || 0) + 1;
+                if (zombie.stuckCount > 3) {
+                    console.log("Removing repeatedly stuck zombie");
+                    this.zombies.splice(i, 1);
+                    
+                    // Make sure UI is updated
+                    updateElement('zombies', this.zombies.length + this.zombiesRemaining);
+                }
+            }
         }
     }
 
@@ -792,28 +826,40 @@ class Game {
 // Initialize the game when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM Loaded - Creating game instance");
-    const game = new Game();
     
-    // Make sure we only have one instance of game running at a time
-    window.gameInstance = game;
+    // Ensure we only have one game instance
+    if (window.gameInstance) {
+        window.gameInstance.destroy();
+    }
+    
+    // Create a new game instance
+    window.gameInstance = new Game();
     
     // Explicitly bind the start button to ensure it works
     document.getElementById('start-game-button').addEventListener('click', () => {
         console.log("Start game button clicked");
+        
+        // Ensure we destroy any existing game before starting a new one
+        if (window.gameInstance) {
+            window.gameInstance.destroy();
+            window.gameInstance = new Game();
+        }
+        
         const playerName = document.getElementById('player-name').value.trim() || 'Player';
         document.getElementById('player-name-display').textContent = playerName;
         
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('game-ui').classList.remove('hidden');
         
-        game.gameStarted = true;
-        game.init();
+        window.gameInstance.startGame();
     });
     
     // Bind end game button
     document.getElementById('end-game-button').addEventListener('click', () => {
         console.log("End game button clicked");
-        game.endGame();
+        if (window.gameInstance) {
+            window.gameInstance.endGame();
+        }
     });
     
     // Also bind enter key on the name input
