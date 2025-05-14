@@ -2,7 +2,9 @@ class Powerup {
     // Static properties to hold sprite images
     static sprites = {
         'nuke': 'assets/upgrades/nuke.png',
-        'spray': 'assets/upgrades/spray.png'
+        'spray': 'assets/upgrades/spray.png',
+        'speed': 'assets/upgrades/speed.png',
+        'shield': 'assets/upgrades/shield.png'
         // Add other powerup images here if needed in the future
     };
     
@@ -92,9 +94,7 @@ class Powerup {
         const screenY = this.y - offsetY;
         
         // Check if we should use an image for this powerup type
-        if ((this.type === 'nuke' || this.type === 'spray') && 
-            Powerup.images[this.type] && 
-            Powerup.images[this.type].complete) {
+        if (Powerup.images[this.type] && Powerup.images[this.type].complete) {
             
             // Draw glowing effect behind image
             const glowSize = this.radius + 5 * this.pulseValue;
