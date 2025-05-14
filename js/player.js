@@ -333,7 +333,7 @@ class Player {
         
         // Check fire rate
         const fireRateForWeapon = this.fireRate[this.weapon];
-        if (currentTime - this.lastShotTime < fireRateForWeapon) {
+        if (currentTime - this.lastShotTime < fireRateForWeapon * 1000) {
             return null;
         }
         
@@ -341,13 +341,15 @@ class Player {
         
         // Create bullet(s) based on weapon type
         if (this.weapon === 'pistol') {
-            return [new Bullet(
+            // Create a single bullet for pistol
+            const bullet = new Bullet(
                 this.x, 
                 this.y, 
                 angle, 
                 this.bulletSpeed, 
                 this.bulletDamage.pistol
-            )];
+            );
+            return [bullet];
         } else if (this.weapon === 'spray') {
             // Create multiple bullets with spread
             const bullets = [];
@@ -418,6 +420,6 @@ class Player {
 
     heal(amount) {
         this.health = Math.min(this.health + amount, this.maxHealth);
-        updateElement('health', this.health);
+        updateElement('health', Math.floor(this.health)); // Show only whole numbers
     }
 }
