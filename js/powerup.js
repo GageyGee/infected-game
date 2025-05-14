@@ -1,5 +1,40 @@
 class Powerup {
+    // Static properties to hold sprite images
+    static sprites = {
+        'nuke': 'assets/upgrades/nuke.png'
+        // Add other powerup images here if needed in the future
+    };
+    
+    static images = {};
+    
+    // Static initialization to load images
+    static initSprites() {
+        // Only load once
+        if (Object.keys(this.images).length === 0) {
+            // Load each sprite
+            for (const [type, src] of Object.entries(this.sprites)) {
+                const img = new Image();
+                
+                img.onload = () => {
+                    console.log(`${type} powerup sprite loaded successfully`);
+                };
+                
+                img.onerror = () => {
+                    console.error(`Failed to load ${type} powerup sprite: ${src}`);
+                };
+                
+                img.src = src;
+                this.images[type] = img;
+            }
+            
+            console.log("Powerup sprites initialized");
+        }
+    }
+
     constructor(x, y, type) {
+        // Ensure sprites are loaded
+        Powerup.initSprites();
+        
         this.x = x;
         this.y = y;
         this.type = type; // 'spray', 'nuke', 'shield', 'speed', 'regeneration'
@@ -54,6 +89,33 @@ class Powerup {
     draw(ctx, offsetX, offsetY) {
         const screenX = this.x - offsetX;
         const screenY = this.y - offsetY;
+        
+        // Special case for nuke - use image if available
+        if (this.type === 'nuke' && 
+            Powerup.images.nuke && 
+            Powerup.images.nuke.complete) {
+            
+            // Draw glowing effect behind image
+            const glowSize = this.radius + 5 * this.pulseValue;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, glowSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw the nuke image
+            const imageSize = this.radius * 2.5;
+            ctx.drawImage(
+                Powerup.images.nuke,
+                screenX - imageSize/2,
+                screenY - imageSize/2,
+                imageSize,
+                imageSize
+            );
+            
+            return;
+        }
+        
+        // For other powerups or if image isn't loaded, use original drawing code
         
         // Glowing effect
         const glowSize = this.radius + 5 * this.pulseValue;
