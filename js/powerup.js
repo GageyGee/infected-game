@@ -2,21 +2,39 @@ class Powerup {
     constructor(x, y, type) {
         this.x = x;
         this.y = y;
-        this.type = type; // 'spray' or 'nuke'
+        this.type = type; // 'spray', 'nuke', 'shield', 'speed', 'regeneration'
         this.radius = 15;
         this.active = true;
         this.pulseValue = 0;
         this.pulseDirection = 1;
         
         // Config based on type
-        if (this.type === 'spray') {
-            this.color = '#ffcc00'; // Gold color for spray gun
-            this.duration = 10000; // 10 seconds duration
-            this.name = 'SPRAY GUN';
-        } else if (this.type === 'nuke') {
-            this.color = '#ff4d4d'; // Red color for nuke
-            this.duration = null; // Instant effect
-            this.name = 'NUKE';
+        switch(this.type) {
+            case 'spray':
+                this.color = '#ffcc00'; // Gold color for spray gun
+                this.duration = 10000; // 10 seconds duration
+                this.name = 'SPRAY GUN';
+                break;
+            case 'nuke':
+                this.color = '#ff4d4d'; // Red color for nuke
+                this.duration = null; // Instant effect
+                this.name = 'NUKE';
+                break;
+            case 'shield':
+                this.color = '#3498db'; // Blue color for shield
+                this.duration = 15000; // 15 seconds duration
+                this.name = 'SHIELD';
+                break;
+            case 'speed':
+                this.color = '#1abc9c'; // Turquoise color for speed
+                this.duration = 12000; // 12 seconds duration
+                this.name = 'SPEED BOOST';
+                break;
+            case 'regeneration':
+                this.color = '#2ecc71'; // Green color for regeneration
+                this.duration = 8000; // 8 seconds duration
+                this.name = 'REGENERATION';
+                break;
         }
     }
 
@@ -64,45 +82,87 @@ class Powerup {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        if (this.type === 'spray') {
-            ctx.fillText('S', screenX, screenY);
-        } else if (this.type === 'nuke') {
-            ctx.fillText('N', screenX, screenY);
+        let icon = '';
+        switch(this.type) {
+            case 'spray': icon = 'S'; break;
+            case 'nuke': icon = 'N'; break;
+            case 'shield': icon = 'D'; break;
+            case 'speed': icon = '+'; break;
+            case 'regeneration': icon = 'R'; break;
         }
+        
+        ctx.fillText(icon, screenX, screenY);
     }
 
     // Apply powerup effect
     apply(game) {
-        if (this.type === 'spray') {
-            game.player.setWeapon('spray', this.duration);
-            showNotification('SPRAY GUN ACTIVATED');
-        } else if (this.type === 'nuke') {
-            // Clear all zombies and add to score
-            const zombieCount = game.zombies.length;
-            game.score += zombieCount;
-            updateElement('score', game.score);
-            updateElement('score-top', game.score);
-            
-            // Visual effect for nuke
-            game.nukeEffect = 1.0; // Start the nuke visual effect
-            
-            // Clear zombies
-            game.zombies = [];
-            updateElement('zombies', 0);
-            
-            showNotification(`NUKE! +${zombieCount} SCORE`);
+        switch(this.type) {
+            case 'spray':
+                game.player.setWeapon('spray', this.duration);
+                showNotification('SPRAY GUN ACTIVATED');
+                break;
+                
+            case 'nuke':
+                // Clear all zombies and add to score
+                const zombieCount = game.zombies.length;
+                game.score += zombieCount;
+                updateElement('score', game.score);
+                updateElement('score-top', game.score);
+                
+                // Visual effect for nuke
+                game.nukeEffect = 1.0; // Start the nuke visual effect
+                
+                // Clear zombies
+                game.zombies = [];
+                updateElement('zombies', 0);
+                
+                showNotification(`NUKE! +${zombieCount} SCORE`);
+                break;
+                
+            case 'shield':
+                game.player.activateShield(this.duration);
+                showNotification('SHIELD ACTIVATED');
+                break;
+                
+            case 'speed':
+                game.player.activateSpeedBoost(this.duration);
+                showNotification('SPEED BOOST ACTIVATED');
+                break;
+                
+            case 'regeneration':
+                game.player.activateRegeneration(this.duration);
+                showNotification('REGENERATION ACTIVATED');
+                break;
         }
     }
 
-    static generateRandom(canvasWidth, canvasHeight, offsetX, offsetY) {
-        // Determine type with weighted probability (spray more common than nuke)
-        const type = Math.random() < 0.3 ? 'spray' : 'nuke';
+    static generateRandom(canvasWidth, canvasHeight, offsetX, offsetY, mapWidth, mapHeight) {
+        // Determine type with weighted probability
+        const rand = Math.random();
+        let type;
         
-        // Generate position within the visible screen area, plus a margin
+        if (rand < 0.3) {
+            type = 'spray'; // 30% chance
+        } else if (rand < 0.35) {
+            type = 'nuke'; // 5% chance (rare)
+        } else if (rand < 0.55) {
+            type = 'shield'; // 20% chance
+        } else if (rand < 0.8) {
+            type = 'speed'; // 25% chance
+        } else {
+            type = 'regeneration'; // 20% chance
+        }
+        
+        // Generate position within the visible area, plus a margin
         const margin = 100; // Keep power-ups away from screen edges
         
-        const x = offsetX + random(margin, canvasWidth - margin);
-        const y = offsetY + random(margin, canvasHeight - margin);
+        // Try to spawn within visible area first
+        let x = offsetX + random(margin, canvasWidth - margin);
+        let y = offsetY + random(margin, canvasHeight - margin);
+        
+        // Clamp to map boundaries
+        x = clamp(x, margin, mapWidth - margin);
+        y = clamp(y, margin, mapHeight - margin);
         
         return new Powerup(x, y, type);
     }
