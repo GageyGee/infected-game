@@ -145,9 +145,22 @@ class Zombie {
 
     attack(player) {
         if (this.attackCooldown <= 0) {
-            player.takeDamage(this.damage);
+            // Deal damage to player (1/3 of player's health)
+            player.takeDamage(33.4); // Exactly 3 hits to kill (100/3 = 33.333...)
+            
+            // Apply knockback to zombie
+            const knockbackDistance = 200;
+            const angle = getAngle(player.x, player.y, this.x, this.y);
+            this.x += Math.cos(angle) * knockbackDistance * 0.3;
+            this.y += Math.sin(angle) * knockbackDistance * 0.3;
+            
+            // Apply slight knockback to player
+            player.applyKnockback(angle, 50);
+            
+            // Set attack cooldown
             this.attackCooldown = 1; // 1 second cooldown between attacks
-            return true;
+            
+            return player.health <= 0; // Return true if player died
         }
         return false;
     }
