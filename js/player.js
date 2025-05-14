@@ -368,48 +368,47 @@ class Player {
         }
     }
     
-    // New method to draw the weapon
-    drawWeapon(ctx, centerX, centerY, mouseX, mouseY) {
-        // Only draw weapon if the image is loaded
-        if (!Player.weaponImages[this.weapon] || !Player.weaponImages[this.weapon].complete) {
-            return;
-        }
-        
-        const weaponImage = Player.weaponImages[this.weapon];
-        
-        // Calculate the angle to the mouse
-        const angle = getAngle(centerX, centerY, mouseX, mouseY);
-        
-        // Save the context state
-        ctx.save();
-        
-        // Calculate position on the circle's edge - push it farther out
-        const positionRadius = this.size * 1.1; // Position it just outside the player circle
-        const weaponPositionX = centerX + Math.cos(angle) * positionRadius;
-        const weaponPositionY = centerY + Math.sin(angle) * positionRadius;
-        
-        // Translate to the weapon position on the circle's edge
-        ctx.translate(weaponPositionX, weaponPositionY);
-        
-        // Rotate to face outwards from the circle 
-        ctx.rotate(angle + Math.PI);
-        
-        // Calculate weapon size while maintaining aspect ratio
-        const originalAspectRatio = weaponImage.width / weaponImage.height;
-        const weaponWidth = this.size * 1.2; // Base size on player size
-        const weaponHeight = weaponWidth / originalAspectRatio; // Maintain aspect ratio
-        
-        // Position the weapon so only a small part overlaps with the player
-        // For a pistol pointing left, we want the "grip" part to be what overlaps
-        const weaponX = -weaponWidth * 0.1; // Small overlap (10% of weapon width)
-        const weaponY = -weaponHeight / 2;  // Center vertically
-        
-        // Draw the weapon image with the correct proportions
-        ctx.drawImage(weaponImage, weaponX, weaponY, weaponWidth, weaponHeight);
-        
-        // Restore the context state
-        ctx.restore();
+// New method to draw the weapon
+drawWeapon(ctx, centerX, centerY, mouseX, mouseY) {
+    // Only draw weapon if the image is loaded
+    if (!Player.weaponImages[this.weapon] || !Player.weaponImages[this.weapon].complete) {
+        return;
     }
+    
+    const weaponImage = Player.weaponImages[this.weapon];
+    
+    // Calculate the angle to the mouse
+    const angle = getAngle(centerX, centerY, mouseX, mouseY);
+    
+    // Save the context state
+    ctx.save();
+    
+    // Calculate position on the circle's edge - push it much farther out
+    const positionRadius = this.size * 1.4; // Increased from 1.1 to 1.4 to push it out more
+    const weaponPositionX = centerX + Math.cos(angle) * positionRadius;
+    const weaponPositionY = centerY + Math.sin(angle) * positionRadius;
+    
+    // Translate to the weapon position on the circle's edge
+    ctx.translate(weaponPositionX, weaponPositionY);
+    
+    // Rotate to face outwards from the circle 
+    ctx.rotate(angle + Math.PI);
+    
+    // Calculate weapon size while maintaining aspect ratio
+    const originalAspectRatio = weaponImage.width / weaponImage.height;
+    const weaponWidth = this.size * 1.2; // Base size on player size
+    const weaponHeight = weaponWidth / originalAspectRatio; // Maintain aspect ratio
+    
+    // Position the weapon with minimal overlap
+    const weaponX = -weaponWidth * 0.05; // Reduced from 0.1 to 0.05 for minimal overlap
+    const weaponY = -weaponHeight / 2;  // Center vertically
+    
+    // Draw the weapon image with the correct proportions
+    ctx.drawImage(weaponImage, weaponX, weaponY, weaponWidth, weaponHeight);
+    
+    // Restore the context state
+    ctx.restore();
+}
 
     shoot(mouseX, mouseY, currentTime) {
         const centerX = window.innerWidth / 2;
