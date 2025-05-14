@@ -1,9 +1,9 @@
 class Zombie {
-    // Static properties to hold sprite images
+    // Static properties to hold sprite images - use relative paths from GitHub
     static sprites = [
-        'https://i.ibb.co/7fMNSfx/s3.png',    // This URL seems to work
-        'https://i.ibb.co/wBr3xb8/s4.png',    // Fixed URL
-        'https://i.ibb.co/JCJbrvZ/s2.png'     // Fixed URL
+        'assets/zombies/s2.png',
+        'assets/zombies/s3.png',
+        'assets/zombies/s4.png'
     ];
     
     static images = [];
@@ -12,12 +12,16 @@ class Zombie {
     static initSprites() {
         // Only load once
         if (this.images.length === 0) {
+            // Flag to track if any images loaded successfully
+            let anyImagesLoaded = false;
+            
             this.sprites.forEach((src, index) => {
                 const img = new Image();
                 
                 // Log when each image loads or fails
                 img.onload = () => {
                     console.log(`Zombie sprite ${index + 1} loaded successfully`);
+                    anyImagesLoaded = true;
                 };
                 
                 img.onerror = () => {
@@ -27,6 +31,14 @@ class Zombie {
                 img.src = src;
                 this.images.push(img);
             });
+            
+            // After a short delay, check if any images loaded
+            setTimeout(() => {
+                if (!anyImagesLoaded) {
+                    console.warn("No zombie images loaded successfully. Using circle fallback.");
+                }
+            }, 2000);
+            
             console.log("Zombie sprites initialized:", this.sprites.length);
         }
     }
