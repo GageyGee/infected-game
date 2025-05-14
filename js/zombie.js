@@ -99,21 +99,13 @@ class Zombie {
             return;
         }
         
-        // Draw body
+        // Draw body - this is the main zombie circle
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(screenX, screenY, this.size, 0, Math.PI * 2);
         ctx.fill();
         
-        // Add shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        
-        // Draw eyes
+        // Draw eyes without shadow effects
         const eyeDistance = this.size * 0.4;
         const eyeSize = this.size * 0.25;
         
